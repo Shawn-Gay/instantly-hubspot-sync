@@ -1,19 +1,8 @@
 import { logger } from "../../lib/logger.ts";
-import { createPropertyGroup, createProperty } from "./client.ts";
+import { createPropertyGroup, createProperty, patchProperty } from "./client.ts";
 import type { HubSpotPropertyDefinition } from "./types.ts";
 
 const GROUP_NAME = "instantly_integration";
-
-const LEAD_STATUS_OPTIONS = [
-  "neutral",
-  "interested",
-  "not_interested",
-  "meeting_booked",
-  "meeting_completed",
-  "closed",
-  "out_of_office",
-  "wrong_person",
-];
 
 const PROPERTY_DEFINITIONS: HubSpotPropertyDefinition[] = [
   {
@@ -35,15 +24,10 @@ const PROPERTY_DEFINITIONS: HubSpotPropertyDefinition[] = [
   {
     name: "instantly_lead_status",
     label: "Instantly Lead Status",
-    type: "enumeration",
-    fieldType: "select",
+    type: "string",
+    fieldType: "text",
     groupName: GROUP_NAME,
     description: "Lead status from Instantly",
-    options: LEAD_STATUS_OPTIONS.map((value, i) => ({
-      label: value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      value,
-      displayOrder: i,
-    })),
   },
   {
     name: "instantly_last_email_sent_date",
@@ -139,7 +123,9 @@ export async function ensureCustomProperties(): Promise<void> {
     if (result) {
       logger.info("Created HubSpot property", { name: prop.name });
     } else {
-      logger.debug("HubSpot property already exists", { name: prop.name });
+      // Property already exists — patch it to ensure type/fieldType match the current definition
+      await patchProperty(prop.name, { type: prop.type, fieldType: prop.fieldType, label: prop.label, description: prop.description });
+      logger.debug("HubSpot property already exists (patched)", { name: prop.name });
     }
   }
 

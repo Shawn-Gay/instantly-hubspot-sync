@@ -12,7 +12,7 @@ let intervalId: ReturnType<typeof setInterval> | null = null;
 /**
  * Generates a dedup hash for polled lead data.
  */
-function generatePollEventId(email: string, campaignId: string, status: string): string {
+function generatePollEventId(email: string, campaignId: string, status: number | string): string {
   const raw = `poll:${email}:${campaignId}:${status}`;
   return new Bun.CryptoHasher("sha256").update(raw).digest("hex");
 }
@@ -50,6 +50,12 @@ async function pollLeads(): Promise<void> {
         const response = await getLeads(campaign.id, 100, cursor);
 
         for (const lead of response.items) {
+          if (!lead.email) {
+            // Instantly API v2 omits email from list responses — cannot process without it
+            logger.warn("Lead missing email, skipping (v2 API limitation)", { leadId: lead.id });
+            continue;
+          }
+
           const eventId = generatePollEventId(lead.email, campaign.id, lead.status);
 
           // Dedup + enqueue in transaction

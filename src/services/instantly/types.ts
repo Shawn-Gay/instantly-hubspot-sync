@@ -27,10 +27,14 @@ export interface InstantlyWebhookPayload {
 // ─── API Response Types ──────────────────────────────────
 
 export interface InstantlyLead {
-  email: string;
-  campaign_id: string;
+  id: string;
+  email?: string; // v2 API omits email from list responses
+  campaign_id?: string; // v2 uses list_id instead
+  list_id?: string;
   campaign_name?: string;
-  status: string;
+  status: number | string;
+  timestamp_created?: string;
+  timestamp_updated?: string;
   timestamp?: string;
   [key: string]: unknown;
 }

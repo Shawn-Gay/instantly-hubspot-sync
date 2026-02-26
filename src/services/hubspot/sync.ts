@@ -104,7 +104,10 @@ export async function syncToHubSpot(
 
   const request: HubSpotBatchUpsertRequest = { inputs };
 
-  logger.info("Batch upserting contacts to HubSpot", { count: inputs.length });
+  logger.info("Batch upserting contacts to HubSpot", {
+    count: inputs.length,
+    contacts: inputs.map((i) => ({ email: i.id, properties: Object.keys(i.properties) })),
+  });
   const response = await batchUpsertContacts(request);
 
   // Update lead_contact_map with returned contact IDs

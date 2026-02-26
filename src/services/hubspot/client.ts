@@ -114,3 +114,14 @@ export async function createProperty(
     property,
   );
 }
+
+export async function patchProperty(
+  name: string,
+  updates: Partial<HubSpotPropertyDefinition>,
+): Promise<void> {
+  await request<HubSpotPropertyDefinition>(
+    "PATCH",
+    `/crm/v3/properties/contacts/${name}`,
+    updates,
+  );
+}

@@ -68,9 +68,7 @@ export async function getLeads(
   if (startingAfter) {
     body.starting_after = startingAfter;
   }
-  const result = await request<InstantlyLeadListResponse>("POST", "/leads/list", body);
-  logger.debug("getLeads raw response", { firstItem: result.items?.[0], keys: result.items?.[0] ? Object.keys(result.items[0]) : [] });
-  return result;
+  return request<InstantlyLeadListResponse>("POST", "/leads/list", body);
 }
 
 // ─── Campaign Endpoints ──────────────────────────────────
@@ -110,6 +108,7 @@ export async function registerWebhooks(baseUrl: string): Promise<void> {
       continue;
     }
 
+    logger.info("Registering webhook", { eventType, webhookUrl });
     await request("POST", "/webhooks", {
       event_type: eventType,
       target_hook_url: webhookUrl,

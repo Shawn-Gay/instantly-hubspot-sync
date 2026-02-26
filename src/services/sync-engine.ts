@@ -15,7 +15,10 @@ async function processBatch(): Promise<void> {
     const jobs = await dequeueJobs(10);
     if (jobs.length === 0) return;
 
-    logger.info("Processing sync batch", { jobCount: jobs.length });
+    logger.info("Processing sync batch", {
+      jobCount: jobs.length,
+      jobs: jobs.map((j) => ({ id: j.id, email: j.leadEmail, event: (j.payload as { event_type?: string }).event_type })),
+    });
 
     const jobInputs = jobs.map((j) => ({
       id: j.id,
