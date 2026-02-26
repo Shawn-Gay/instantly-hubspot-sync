@@ -48,7 +48,7 @@ export interface InstantlyCampaign {
 export interface InstantlyWebhook {
   id: string;
   event_type: string;
-  webhook_url: string;
+  target_hook_url: string;
 }
 
 export interface InstantlyWebhookListResponse {

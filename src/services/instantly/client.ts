@@ -61,14 +61,16 @@ export async function getLeads(
   limit = 100,
   startingAfter?: string,
 ): Promise<InstantlyLeadListResponse> {
-  const params: Record<string, string> = {
+  const body: Record<string, unknown> = {
     campaign_id: campaignId,
-    limit: String(limit),
+    limit,
   };
   if (startingAfter) {
-    params.starting_after = startingAfter;
+    body.starting_after = startingAfter;
   }
-  return request<InstantlyLeadListResponse>("GET", "/leads", undefined, params);
+  const result = await request<InstantlyLeadListResponse>("POST", "/leads/list", body);
+  logger.debug("getLeads raw response", { firstItem: result.items?.[0], keys: result.items?.[0] ? Object.keys(result.items[0]) : [] });
+  return result;
 }
 
 // ─── Campaign Endpoints ──────────────────────────────────
@@ -98,7 +100,7 @@ export async function registerWebhooks(baseUrl: string): Promise<void> {
   const webhookUrl = `${baseUrl}/webhooks/instantly`;
 
   const existingUrls = new Set(
-    existing.items.map((w: InstantlyWebhook) => `${w.event_type}:${w.webhook_url}`),
+    existing.items.map((w: InstantlyWebhook) => `${w.event_type}:${w.target_hook_url}`),
   );
 
   for (const eventType of WEBHOOK_EVENT_TYPES) {
@@ -110,7 +112,7 @@ export async function registerWebhooks(baseUrl: string): Promise<void> {
 
     await request("POST", "/webhooks", {
       event_type: eventType,
-      webhook_url: webhookUrl,
+      target_hook_url: webhookUrl,
     });
     logger.info("Registered webhook", { eventType, webhookUrl });
   }
