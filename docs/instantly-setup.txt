@@ -1,0 +1,105 @@
+INSTANTLY INTEGRATION SETUP
+===========================
+
+This service connects to Instantly's v2 API for both webhook
+registration and polling. Here's how to set it up.
+
+
+1. Get Your API Key
+-------------------
+  a. Log in to Instantly at https://app.instantly.ai
+  b. Go to Settings > Integrations > API
+  c. Copy your API key
+
+Set it in your .env file:
+
+  INSTANTLY_API_KEY=your_api_key_here
+
+
+2. Automatic Webhook Registration
+----------------------------------
+By default (AUTO_REGISTER_WEBHOOKS=true), the service registers
+webhooks with Instantly on every startup. It will:
+
+  a. List existing webhooks via GET /api/v2/webhooks
+  b. For each of the 7 event types, check if a webhook already
+     exists pointing to your WEBHOOK_BASE_URL
+  c. Register any missing webhooks via POST /api/v2/webhooks
+
+The webhook URL registered is:
+  {WEBHOOK_BASE_URL}/webhooks/instantly
+
+This is idempotent -- running the service multiple times will not
+create duplicate webhook registrations.
+
+To disable automatic registration:
+  AUTO_REGISTER_WEBHOOKS=false
+
+
+3. Manual Webhook Registration
+------------------------------
+If you prefer to register webhooks yourself (or auto-registration
+fails), you can do it through the Instantly dashboard or API.
+
+Point each webhook to:
+  https://your-app.up.railway.app/webhooks/instantly
+
+Register one webhook per event type (see list below).
+
+
+4. Event Types Covered
+----------------------
+The service handles all 7 Instantly campaign event types:
+
+  Event Type            What It Means
+  ----------            -------------
+  email_sent            An email was sent to the lead
+  email_opened          The lead opened an email
+  email_clicked         The lead clicked a link in the email
+  email_bounced         The email bounced (invalid address, etc.)
+  email_replied         The lead replied to the email
+  lead_status_change    The lead's status changed in Instantly
+  email_unsubscribed    The lead unsubscribed from emails
+
+
+5. Webhook Secret / HMAC Verification (Optional)
+-------------------------------------------------
+For added security, you can configure a shared secret:
+
+  WEBHOOK_SECRET=your_shared_secret_here
+
+When set, the service checks the x-instantly-signature header on
+incoming webhooks. The expected signature is:
+
+  SHA256(WEBHOOK_SECRET + raw_request_body)  (hex encoded)
+
+If the signature doesn't match, the event is ignored (but a 200 is
+still returned to prevent Instantly retry storms).
+
+If WEBHOOK_SECRET is empty (default), signature verification is
+skipped and all incoming webhooks are accepted.
+
+
+6. Polling Fallback
+-------------------
+In addition to webhooks, the service polls the Instantly API on a
+regular interval to catch any events that webhooks might have missed.
+
+Configuration:
+  POLL_ENABLED=true          Enable or disable polling
+  POLL_INTERVAL_MS=300000    Poll interval in milliseconds (default 5 min)
+
+How it works:
+  a. Every POLL_INTERVAL_MS, the poller fetches leads from all
+     active campaigns via the Instantly API
+  b. Each lead's data is compared against what's already been
+     processed (using the processed_events table for dedup)
+  c. New or changed data is queued as sync jobs
+  d. The sync engine picks them up and pushes to HubSpot
+
+The poller uses cursor-based pagination and stores its state in the
+poll_state database table, so it resumes where it left off after
+restarts.
+
+Polling is rate-limited to 10 requests per 10 seconds to stay within
+Instantly's API limits.

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:developer.instantly.ai)",
+      "WebFetch(domain:developers.hubspot.com)",
+      "WebFetch(domain:help.instantly.ai)",
+      "Bash(node:*)",
+      "Bash(bun init:*)",
+      "Bash(bun add:*)",
+      "Bash(rm:*)",
+      "Bash(bunx drizzle-kit:*)",
+      "Bash(bunx tsc:*)"
+    ]
+  }
+}

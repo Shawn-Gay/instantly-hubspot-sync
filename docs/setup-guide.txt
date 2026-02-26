@@ -1,0 +1,124 @@
+SETUP & DEPLOYMENT GUIDE
+========================
+
+Prerequisites
+-------------
+  * Bun >= 1.0          https://bun.sh
+  * PostgreSQL >= 14     (local or hosted, e.g. Railway, Neon, Supabase)
+  * An Instantly.ai account with API access
+  * A HubSpot account with a Private App (see hubspot-setup.txt)
+  * A publicly reachable URL for webhooks (Railway, ngrok, etc.)
+
+
+1. Clone & Install
+------------------
+  git clone <your-repo-url>
+  cd instantly-hubspot-sync
+  bun install
+
+
+2. Environment Variables
+------------------------
+Copy the template and fill in your values:
+
+  cp .env.example .env
+
+Variable              Required  Default   Description
+--------              --------  -------   -----------
+DATABASE_URL          Yes       --        PostgreSQL connection string
+                                          e.g. postgresql://user:pass@host:5432/dbname
+
+INSTANTLY_API_KEY     Yes       --        API key from Instantly dashboard
+
+HUBSPOT_ACCESS_TOKEN  Yes       --        Private App access token from HubSpot
+
+WEBHOOK_BASE_URL      Yes       --        Public URL of this service (no trailing slash)
+                                          e.g. https://your-app.up.railway.app
+
+PORT                  No        3000      HTTP server port
+
+POLL_INTERVAL_MS      No        300000    How often to poll Instantly (ms). Default 5 min.
+
+POLL_ENABLED          No        true      Set to "false" to disable polling entirely
+
+SYNC_INTERVAL_MS      No        10000     How often the sync engine processes the queue (ms)
+
+WEBHOOK_SECRET        No        (empty)   Shared secret for HMAC signature verification.
+                                          Leave blank to skip verification.
+
+AUTO_REGISTER_WEBHOOKS  No      true      Set to "false" to skip automatic webhook
+                                          registration on startup
+
+
+3. Local Development
+--------------------
+Start with hot reload:
+
+  bun run dev
+
+This runs `bun run --watch src/index.ts`. The service will:
+  - Connect to the database and run migrations
+  - Create HubSpot custom properties if they don't exist
+  - Register webhooks with Instantly (if AUTO_REGISTER_WEBHOOKS=true)
+  - Start the sync engine and poller
+  - Listen on PORT (default 3000)
+
+For local webhook testing, use a tunnel like ngrok:
+
+  ngrok http 3000
+
+Then set WEBHOOK_BASE_URL to the ngrok URL.
+
+
+4. Railway Deployment
+---------------------
+  a. Push your repo to GitHub
+  b. Create a new project in Railway
+  c. Add a PostgreSQL database service
+  d. Add a new service from your GitHub repo
+  e. Set the environment variables in the Railway dashboard:
+       - DATABASE_URL will be provided by Railway's PostgreSQL
+       - Set the other required vars (INSTANTLY_API_KEY, etc.)
+       - Set WEBHOOK_BASE_URL to your Railway service URL
+  f. Railway will detect Bun and run `bun run start` automatically
+  g. Database migrations run automatically on boot
+
+
+5. Verifying It Works
+---------------------
+Health check -- should return JSON with queue stats:
+
+  curl https://your-app.up.railway.app/health
+
+Expected response:
+  {
+    "status": "ok",
+    "timestamp": "2025-01-01T00:00:00.000Z",
+    "queue": {}
+  }
+
+Test webhook -- simulate an Instantly event:
+
+  curl -X POST https://your-app.up.railway.app/webhooks/instantly \
+    -H "Content-Type: application/json" \
+    -d '{
+      "event_type": "email_sent",
+      "event_data": {
+        "email": "test@example.com",
+        "campaign_id": "test-campaign-id",
+        "campaign_name": "Test Campaign",
+        "timestamp": "2025-01-01T00:00:00.000Z"
+      }
+    }'
+
+Expected response:
+  { "status": "ok", "processed": true, "duplicate": false }
+
+
+Available Scripts
+-----------------
+  bun run dev          Start with hot reload
+  bun run start        Production start
+  bun run db:generate  Generate Drizzle migration files
+  bun run db:migrate   Run migrations via drizzle-kit
+  bun run db:studio    Open Drizzle Studio (database GUI)

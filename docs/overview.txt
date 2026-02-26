@@ -1,0 +1,77 @@
+INSTANTLY -> HUBSPOT SYNC SERVICE
+=================================
+
+What Is This?
+-------------
+A real-time sync service that pushes Instantly.ai email campaign
+activity into HubSpot contacts. Every time a lead is emailed, opens,
+clicks, replies, bounces, unsubscribes, or changes status in Instantly,
+the corresponding HubSpot contact is created or updated automatically.
+
+
+How It Works (Dual-Trigger Architecture)
+----------------------------------------
+The service uses two complementary data sources so nothing is missed:
+
+  1. Webhooks (primary) -- Instantly sends HTTP POST requests to
+     this service in real time whenever campaign events happen.
+
+  2. Polling (fallback) -- On a configurable interval the service
+     queries the Instantly API directly and picks up any events
+     that webhooks may have missed (network blip, downtime, etc.).
+
+Both paths feed into a unified queue that deduplicates events before
+syncing them to HubSpot, so contacts are never double-updated.
+
+
+Features
+--------
+  * Real-time sync via Instantly webhooks
+  * Polling fallback for reliability
+  * Deduplication of events (processed_events table)
+  * Persistent job queue with retry and exponential backoff
+  * Dead letter queue for events that fail after 5 attempts
+  * Token-bucket rate limiting for both APIs
+  * Automatic creation of HubSpot custom properties on boot
+  * Health monitoring endpoint with queue stats
+  * Crash recovery (resets stale "processing" jobs on startup)
+  * Automatic webhook registration with Instantly
+
+
+Tech Stack
+----------
+  Runtime       Bun
+  Language      TypeScript
+  Web Framework Hono
+  Database      PostgreSQL
+  ORM           Drizzle ORM
+  Deployment    Railway (or any platform that runs Bun)
+
+
+Data Flow
+---------
+
+  Instantly Campaign Activity
+        |
+        v
+  +-- Webhook POST --------+     +-- Polling (every 5 min) --+
+  |  /webhooks/instantly    |     |  Instantly REST API        |
+  +-----------+-------------+     +------------+--------------+
+              |                                |
+              v                                v
+        +--- Dedup (processed_events) --------+
+              |
+              v
+        Queue (sync_jobs table)
+              |
+              v
+        Sync Engine  (processes batch every 10s)
+              |
+              v
+        HubSpot API
+        - Find or create contact by email
+        - Update custom properties
+              |
+              v
+        HubSpot Contact Record
+        (instantly_integration property group)

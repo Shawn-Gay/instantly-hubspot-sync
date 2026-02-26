@@ -1,0 +1,84 @@
+HUBSPOT INTEGRATION SETUP
+=========================
+
+This service connects to HubSpot via a Private App. Follow the steps
+below to create one and get your access token.
+
+
+1. Create a Private App
+-----------------------
+  a. Go to HubSpot > Settings > Integrations > Private Apps
+  b. Click "Create a private app"
+  c. Name it something like "Instantly Sync"
+  d. Under the "Scopes" tab, add the required scopes (see below)
+  e. Click "Create app"
+  f. Copy the access token -- this is your HUBSPOT_ACCESS_TOKEN
+
+
+2. Required Scopes
+------------------
+  crm.objects.contacts.read
+  crm.objects.contacts.write
+  crm.schemas.contacts.read
+  crm.schemas.contacts.write
+
+The contact read/write scopes let the service find and update contacts.
+The schema scopes let it create custom properties automatically.
+
+
+3. Set the Environment Variable
+-------------------------------
+Add the token to your .env file:
+
+  HUBSPOT_ACCESS_TOKEN=pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+
+4. Auto-Created Custom Properties
+----------------------------------
+On startup, the service automatically creates a property group and
+11 custom properties on HubSpot contacts. If they already exist,
+they are left untouched.
+
+Property Group: instantly_integration
+Label:          "Instantly Integration"
+
+Property Name                     Type          Field Type        Description
+-----------------------------     ------        ----------        -----------
+instantly_campaign_name           string        text              Name of the Instantly campaign
+instantly_campaign_id             string        text              UUID of the Instantly campaign
+instantly_lead_status             enumeration   select            Lead status from Instantly
+instantly_last_email_sent_date    datetime      date              Timestamp of last email sent
+instantly_email_open_count        number        number            Number of email opens tracked
+instantly_email_click_count       number        number            Number of email clicks tracked
+instantly_reply_received          enumeration   booleancheckbox   Whether the lead has replied
+instantly_reply_snippet           string        textarea          Preview text of the lead's reply
+instantly_email_bounced           enumeration   booleancheckbox   Whether the email bounced
+instantly_unsubscribed            enumeration   booleancheckbox   Whether the lead unsubscribed
+instantly_last_activity_date      datetime      date              Most recent activity timestamp
+
+The instantly_lead_status property has these options:
+  - Neutral
+  - Interested
+  - Not Interested
+  - Meeting Booked
+  - Meeting Completed
+  - Closed
+  - Out Of Office
+  - Wrong Person
+
+
+5. Where to Find Synced Data
+-----------------------------
+Open any contact in HubSpot that has been synced:
+
+  a. Go to Contacts > find the contact by email
+  b. In the left sidebar, look for the "Instantly Integration"
+     property group
+  c. All 11 properties above will appear there with the latest
+     values from Instantly
+
+You can also use these properties in:
+  - HubSpot lists and segments (e.g. filter by lead status)
+  - Workflows (e.g. trigger when reply_received = true)
+  - Reports and dashboards
+  - Contact views (add columns for Instantly properties)

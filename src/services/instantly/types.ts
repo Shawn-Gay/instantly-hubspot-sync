@@ -1,0 +1,56 @@
+// ─── Webhook Event Types ─────────────────────────────────
+
+export type InstantlyEventType =
+  | "email_sent"
+  | "email_opened"
+  | "email_clicked"
+  | "email_bounced"
+  | "email_replied"
+  | "lead_status_change"
+  | "email_unsubscribed";
+
+export interface InstantlyWebhookPayload {
+  event_type: InstantlyEventType;
+  timestamp?: string;
+  data: {
+    email?: string;
+    lead_email?: string;
+    campaign_id?: string;
+    campaign_name?: string;
+    status?: string;
+    reply_text?: string;
+    subject?: string;
+    [key: string]: unknown;
+  };
+}
+
+// ─── API Response Types ──────────────────────────────────
+
+export interface InstantlyLead {
+  email: string;
+  campaign_id: string;
+  campaign_name?: string;
+  status: string;
+  timestamp?: string;
+  [key: string]: unknown;
+}
+
+export interface InstantlyLeadListResponse {
+  items: InstantlyLead[];
+  next_starting_after?: string;
+}
+
+export interface InstantlyCampaign {
+  id: string;
+  name: string;
+}
+
+export interface InstantlyWebhook {
+  id: string;
+  event_type: string;
+  webhook_url: string;
+}
+
+export interface InstantlyWebhookListResponse {
+  items: InstantlyWebhook[];
+}
