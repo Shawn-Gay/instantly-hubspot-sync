@@ -63,12 +63,28 @@ export const leadContactMap = pgTable(
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     leadEmail: text("lead_email").notNull(),
     hubspotContactId: text("hubspot_contact_id").notNull(),
+    tier: text("tier").notNull().default("cold"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("idx_lead_contact_map_email").on(table.leadEmail)],
 );
 
-// ─── 4. poll_state ───────────────────────────────────────
+// ─── 4. cold_queue ───────────────────────────────────────
+
+export const coldQueue = pgTable(
+  "cold_queue",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    leadEmail: text("lead_email").notNull(),
+    campaignId: text("campaign_id"),
+    campaignName: text("campaign_name"),
+    payload: jsonb("payload").notNull(),
+    queuedAt: timestamp("queued_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("idx_cold_queue_email").on(table.leadEmail)],
+);
+
+// ─── 5. poll_state ──────────────────────────────────────
 
 export const pollState = pgTable("poll_state", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -78,7 +94,7 @@ export const pollState = pgTable("poll_state", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// ─── 5. sync_errors ──────────────────────────────────────
+// ─── 6. sync_errors ──────────────────────────────────────
 
 export const syncErrors = pgTable("sync_errors", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),

@@ -37,6 +37,7 @@ export const config = {
   syncIntervalMs: optionalInt("SYNC_INTERVAL_MS", 10_000),
   webhookSecret: optional("WEBHOOK_SECRET", ""),
   autoRegisterWebhooks: optionalBool("AUTO_REGISTER_WEBHOOKS", true),
+  coldPoolMax: optionalInt("COLD_POOL_MAX", 200),
 } as const;
 
 export type Config = typeof config;

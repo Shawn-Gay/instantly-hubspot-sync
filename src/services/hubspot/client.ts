@@ -93,6 +93,10 @@ export async function batchUpsertContacts(
   );
 }
 
+export async function deleteContact(contactId: string): Promise<void> {
+  await request<void>("DELETE", `/crm/v3/objects/contacts/${contactId}`);
+}
+
 // ─── Property Endpoints ──────────────────────────────────
 
 export async function createPropertyGroup(

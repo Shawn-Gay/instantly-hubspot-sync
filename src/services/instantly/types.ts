@@ -17,7 +17,10 @@ export interface InstantlyWebhookPayload {
     lead_email?: string;
     campaign_id?: string;
     campaign_name?: string;
-    status?: string;
+    status?: string | number;
+    lt_interest_status?: number;
+    open_count?: number;
+    click_count?: number;
     reply_text?: string;
     subject?: string;
     [key: string]: unknown;
@@ -33,6 +36,10 @@ export interface InstantlyLead {
   list_id?: string;
   campaign_name?: string;
   status: number | string;
+  lt_interest_status?: number;
+  email_open_count?: number;
+  email_click_count?: number;
+  email_reply_count?: number;
   timestamp_created?: string;
   timestamp_updated?: string;
   timestamp?: string;

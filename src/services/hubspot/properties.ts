@@ -105,6 +105,14 @@ const PROPERTY_DEFINITIONS: HubSpotPropertyDefinition[] = [
     groupName: GROUP_NAME,
     description: "Most recent activity timestamp from Instantly",
   },
+  {
+    name: "instantly_lead_tier",
+    label: "Instantly Lead Tier",
+    type: "string",
+    fieldType: "text",
+    groupName: GROUP_NAME,
+    description: "Contact tier: cold, warm, or hot",
+  },
 ];
 
 export async function ensureCustomProperties(): Promise<void> {
