@@ -2,23 +2,19 @@ import chalk from "chalk";
 import { Hono } from "hono";
 import { config } from "./config.ts";
 import { logger } from "./lib/logger.ts";
-import { printBanner, step, stepSync } from "./lib/banner.ts";
-import { runMigrations } from "./db/migrate.ts";
-import { resetStaleJobs } from "./queue/processor.ts";
-import { ensureCustomProperties } from "./services/hubspot/properties.ts";
+import { printBanner, step } from "./lib/banner.ts";
 import { registerWebhooks } from "./services/instantly/client.ts";
-import { startSyncEngine } from "./services/sync-engine.ts";
-import { startPoller } from "./services/instantly/poller.ts";
 import { webhookRoutes } from "./routes/webhooks.ts";
 import { healthRoutes } from "./routes/health.ts";
-import { adminRoutes } from "./routes/admin.ts";
+import { syncRoutes } from "./routes/sync.ts";
+import { runMigrations } from "./db/migrate.ts";
 
 const app = new Hono();
 
 // ─── Routes ──────────────────────────────────────────────
 app.route("/webhooks", webhookRoutes);
 app.route("/health", healthRoutes);
-app.route("/admin", adminRoutes);
+app.route("/sync", syncRoutes);
 
 // Root redirect to health
 app.get("/", (c) => c.redirect("/health"));
@@ -27,30 +23,10 @@ app.get("/", (c) => c.redirect("/health"));
 async function boot(): Promise<void> {
   printBanner();
 
-  // 1. Run database migrations
-  await step("Database migrations", runMigrations);
+  // 1. Run DB migrations
+  await step("Run DB migrations", () => runMigrations());
 
-  // 2. Reset stale processing jobs
-  await step(
-    "Reset stale jobs",
-    resetStaleJobs,
-    (count) =>
-      count > 0
-        ? `Reset stale jobs ${chalk.yellow(`(${count} recovered)`)}`
-        : `Reset stale jobs ${chalk.dim("(none)")}`,
-  );
-
-  // 3. Ensure HubSpot custom properties exist
-  await step(
-    "Verify HubSpot properties",
-    ensureCustomProperties,
-    ({ created, patched }) =>
-      created > 0
-        ? `HubSpot properties ready ${chalk.yellow(`(+${created} new, ${patched} patched)`)}`
-        : `HubSpot properties verified ${chalk.dim(`(${patched} up to date)`)}`,
-  );
-
-  // 4. Auto-register Instantly webhooks
+  // 2. Auto-register Instantly webhooks
   if (config.autoRegisterWebhooks) {
     await step(
       "Register Instantly webhooks",
@@ -63,23 +39,11 @@ async function boot(): Promise<void> {
         return `Webhooks ${registered > 0 ? "registered" : "verified"} ${chalk.dim("(" + parts.join(", ") + ")")}`;
       },
     );
-  }
-
-  // 5. Start sync engine
-  if (config.syncEnabled) {
-    stepSync("Start sync engine", startSyncEngine);
   } else {
-    console.log(chalk.yellow("  ⚠  Sync engine disabled") + chalk.dim(" (SYNC_ENABLED=false)"));
+    console.log(chalk.yellow("  ⚠  Webhook registration disabled") + chalk.dim(" (AUTO_REGISTER_WEBHOOKS=false)"));
   }
 
-  // 6. Start poller
-  if (config.pollEnabled) {
-    stepSync("Start poller", startPoller);
-  } else {
-    console.log(chalk.yellow("  ⚠  Poller disabled") + chalk.dim(" (POLL_ENABLED=false)"));
-  }
-
-  // 7. Start server + ready
+  // 3. Start server
   Bun.serve({ port: config.port, fetch: app.fetch });
   console.log(
     "\n" +

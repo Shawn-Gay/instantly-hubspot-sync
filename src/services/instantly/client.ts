@@ -3,10 +3,12 @@ import { ApiError } from "../../lib/errors.ts";
 import { logger } from "../../lib/logger.ts";
 import { instantlyLimiter } from "../../lib/rate-limiter.ts";
 import type {
+  InstantlyLead,
   InstantlyLeadListResponse,
   InstantlyWebhook,
   InstantlyWebhookListResponse,
 } from "./types.ts";
+
 
 const BASE_URL = "https://api.instantly.ai/api/v2";
 
@@ -55,25 +57,57 @@ async function request<T>(
 
 // ─── Lead Endpoints ──────────────────────────────────────
 
-export async function getLeads(
-  campaignId: string,
-  limit = 100,
-  startingAfter?: string,
-): Promise<InstantlyLeadListResponse> {
-  const body: Record<string, unknown> = {
-    campaign_id: campaignId,
-    limit,
-  };
-  if (startingAfter) {
-    body.starting_after = startingAfter;
+/**
+ * Find a lead by email address.
+ * Uses POST /leads/list with email filter (Instantly v2).
+ * Returns the lead, or null if not found.
+ */
+export async function findLeadByEmail(email: string): Promise<InstantlyLead | null> {
+  try {
+    const res = await request<{ items?: InstantlyLead[] }>("POST", "/leads/list", { email, limit: 1 });
+    return res.items?.[0] ?? null;
+  } catch (err) {
+    if (err instanceof ApiError && err.statusCode === 404) return null;
+    throw err;
   }
-  return request<InstantlyLeadListResponse>("POST", "/leads/list", body);
 }
 
-// ─── Campaign Endpoints ──────────────────────────────────
+/**
+ * Pause a lead by setting its status to 2.
+ * Uses PATCH /leads/{id}.
+ */
+export async function pauseLead(leadId: string): Promise<void> {
+  await request("PATCH", `/leads/${leadId}`, { status: 2 });
+  logger.info("Lead paused in Instantly", { leadId });
+}
 
-export async function getCampaigns(): Promise<{ items: { id: string; name: string }[] }> {
-  return request("GET", "/campaigns", undefined, { limit: "100" });
+/**
+ * Fetch all leads across all campaigns, paginated.
+ * Uses POST /leads/list (Instantly v2 — GET /leads does not exist).
+ */
+export async function getAllLeads(limit = 100): Promise<InstantlyLead[]> {
+  const all: InstantlyLead[] = [];
+  let cursor: string | undefined;
+
+  // Lets keep the batch sizes to 100
+  limit = limit > 100 ? 100 : limit;
+
+  while (true) {
+    const body: Record<string, unknown> = { 
+      limit,
+      in_campaign: true
+     };
+    if (cursor) body.starting_after = cursor;
+
+    const res = await request<InstantlyLeadListResponse>("POST", "/leads/list", body);
+    const items = res.items ?? [];
+    all.push(...items);
+
+    if (!res.next_starting_after || items.length < 100) break;
+    cursor = res.next_starting_after;
+  }
+
+  return all;
 }
 
 // ─── Webhook Endpoints ───────────────────────────────────

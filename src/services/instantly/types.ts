@@ -6,7 +6,8 @@ export type InstantlyEventType =
   | "email_link_clicked"
   | "email_bounced"
   | "reply_received"
-  | "lead_unsubscribed";
+  | "lead_unsubscribed"
+  | "lead_status_change";
 
 export interface InstantlyWebhookPayload {
   event_type: InstantlyEventType;
@@ -26,33 +27,23 @@ export interface InstantlyWebhookPayload {
   };
 }
 
-// ─── API Response Types ──────────────────────────────────
+// ─── API Types ────────────────────────────────────────────
 
 export interface InstantlyLead {
   id: string;
-  email?: string; // v2 API omits email from list responses
-  campaign_id?: string; // v2 uses list_id instead
-  list_id?: string;
-  campaign_name?: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  company_name?: string;
+  phone?: string;
+  website?: string;
   status: number | string;
-  lt_interest_status?: number;
-  email_open_count?: number;
-  email_click_count?: number;
-  email_reply_count?: number;
-  timestamp_created?: string;
-  timestamp_updated?: string;
-  timestamp?: string;
   [key: string]: unknown;
 }
 
 export interface InstantlyLeadListResponse {
   items: InstantlyLead[];
   next_starting_after?: string;
-}
-
-export interface InstantlyCampaign {
-  id: string;
-  name: string;
 }
 
 export interface InstantlyWebhook {

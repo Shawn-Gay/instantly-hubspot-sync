@@ -4,15 +4,11 @@ import ora, { type Ora } from "ora";
 import { config } from "../config.ts";
 
 export function printBanner(): void {
-  const title = chalk.bold.hex("#00C2FF")("⚡ Instantly  →  HubSpot Sync");
-
-  const flag = (label: string, on: boolean) =>
-    `${chalk.dim(label + ":")} ${on ? chalk.greenBright("on") : chalk.red("off")}`;
+  const title = chalk.bold.hex("#00C2FF")("⚡ Instantly  ↔  Zoho Sync");
 
   const flags = [
     chalk.dim("port:") + " " + chalk.white(config.port),
-    flag("sync", config.syncEnabled),
-    flag("poller", config.pollEnabled),
+    chalk.dim("webhooks:") + " " + chalk.greenBright("/instantly  /justcall"),
   ].join(chalk.dim("   ·   "));
 
   console.log(
@@ -41,13 +37,3 @@ export async function step<T>(
   }
 }
 
-export function stepSync(label: string, fn: () => void): void {
-  const spinner: Ora = ora({ text: chalk.dim(label), color: "cyan" }).start();
-  try {
-    fn();
-    spinner.succeed(chalk.dim(label));
-  } catch (err) {
-    spinner.fail(chalk.red(label));
-    throw err;
-  }
-}

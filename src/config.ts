@@ -27,18 +27,28 @@ function optionalInt(name: string, defaultValue: number): number {
 }
 
 export const config = {
-  databaseUrl: required("DATABASE_URL"),
-  instantlyApiKey: required("INSTANTLY_API_KEY"),
-  hubspotAccessToken: required("HUBSPOT_ACCESS_TOKEN"),
-  webhookBaseUrl: required("WEBHOOK_BASE_URL"),
+  // Server
   port: optionalInt("PORT", 3000),
-  pollIntervalMs: optionalInt("POLL_INTERVAL_MS", 300_000),
-  pollEnabled: optionalBool("POLL_ENABLED", true),
-  syncIntervalMs: optionalInt("SYNC_INTERVAL_MS", 10_000),
-  syncEnabled: optionalBool("SYNC_ENABLED", true),
+
+  // Database
+  databaseUrl: required("DATABASE_URL"),
+
+  // Instantly
+  instantlyApiKey: required("INSTANTLY_API_KEY"),
+  webhookBaseUrl: required("WEBHOOK_BASE_URL"),
   webhookSecret: optional("WEBHOOK_SECRET", ""),
   autoRegisterWebhooks: optionalBool("AUTO_REGISTER_WEBHOOKS", true),
-  coldPoolMax: optionalInt("COLD_POOL_MAX", 200),
+
+  // Zoho CRM
+  zohoClientId: required("ZOHO_CLIENT_ID"),
+  zohoClientSecret: required("ZOHO_CLIENT_SECRET"),
+  zohoRefreshToken: required("ZOHO_REFRESH_TOKEN"),
+  zohoAccountsUrl: optional("ZOHO_ACCOUNTS_URL", "https://accounts.zoho.com"),
+  zohoApiBaseUrl: optional("ZOHO_API_BASE_URL", "https://www.zohoapis.com/crm/v2"),
+  zohoEmailsSentField: required("ZOHO_EMAILS_SENT_FIELD"),
+
+  // JustCall
+  justcallMeetingBookedOutcome: optional("JUSTCALL_MEETING_BOOKED_OUTCOME", "Meeting Booked"),
 } as const;
 
 export type Config = typeof config;

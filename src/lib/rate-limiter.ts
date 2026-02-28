@@ -37,8 +37,8 @@ export class RateLimiter {
   }
 }
 
-// HubSpot: ~90 requests per 10 seconds (conservative)
-export const hubspotLimiter = new RateLimiter(90, 90, 10_000);
+// Zoho CRM: conservative limit (varies by plan, ~10/sec typical)
+export const zohoLimiter = new RateLimiter(10, 10, 1_000);
 
 // Instantly: ~10 requests per 10 seconds (conservative for shared workspace)
 export const instantlyLimiter = new RateLimiter(10, 10, 10_000);

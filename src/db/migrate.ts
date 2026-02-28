@@ -1,15 +1,10 @@
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { config } from "../config.ts";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 
 export async function runMigrations(): Promise<void> {
-  // Separate connection with notices suppressed to avoid "already exists" noise on boot
-  const client = postgres(config.databaseUrl, { onnotice: () => {} });
-  const db = drizzle(client);
-  try {
-    await migrate(db, { migrationsFolder: "./drizzle" });
-  } finally {
-    await client.end();
-  }
+  const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
+  const db = drizzle(sql);
+  await migrate(db, { migrationsFolder: "./drizzle" });
+  await sql.end();
 }
