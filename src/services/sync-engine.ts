@@ -7,13 +7,13 @@ import { config } from "../config.ts";
 let running = false;
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
-async function processBatch(): Promise<void> {
-  if (running) return;
+async function processBatch(): Promise<number> {
+  if (running) return -1; // -1 = skipped (already running)
   running = true;
 
   try {
     const jobs = await dequeueJobs(10);
-    if (jobs.length === 0) return;
+    if (jobs.length === 0) return 0;
 
     logger.info("Processing sync batch", {
       jobCount: jobs.length,
@@ -46,17 +46,25 @@ async function processBatch(): Promise<void> {
         );
       }
     }
+
+    return jobs.length;
   } catch (error) {
     logger.error("Sync engine error", {
       error: error instanceof Error ? error.message : String(error),
     });
+    return 0;
   } finally {
     running = false;
   }
+  return 0;
+}
+
+export async function triggerBatch(): Promise<{ jobsProcessed: number; skipped: boolean }> {
+  const result = await processBatch();
+  return { jobsProcessed: result === -1 ? 0 : result, skipped: result === -1 };
 }
 
 export function startSyncEngine(): void {
-  logger.info("Starting sync engine", { intervalMs: config.syncIntervalMs });
   intervalId = setInterval(processBatch, config.syncIntervalMs);
   // Run immediately on start
   processBatch();

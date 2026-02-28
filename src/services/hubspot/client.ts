@@ -10,30 +10,51 @@ import type {
 } from "./types.ts";
 
 const BASE_URL = "https://api.hubapi.com";
+const MAX_ATTEMPTS = 4;
 
-async function request<T>(
+/**
+ * Executes a fetch against the HubSpot API with rate-limiter gating and
+ * automatic retry on 429 (up to MAX_ATTEMPTS total tries, honouring Retry-After).
+ */
+async function fetchWithRetry(
   method: string,
   path: string,
   body?: unknown,
-): Promise<T> {
-  await hubspotLimiter.acquire();
+): Promise<Response> {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    await hubspotLimiter.acquire();
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${config.hubspotAccessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${config.hubspotAccessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    if (res.status !== 429) return res;
+
+    if (attempt === MAX_ATTEMPTS) {
+      const responseBody = await res.text().catch(() => "");
+      throw new ApiError("HubSpot rate limit exceeded after retries", 429, responseBody);
+    }
+
+    const retryAfterSec = parseInt(res.headers.get("Retry-After") ?? "10", 10);
+    logger.warn("HubSpot rate limited, retrying", { attempt, retryAfterSec, path });
+    await Bun.sleep(retryAfterSec * 1_000);
+  }
+
+  // Unreachable, but satisfies TypeScript
+  throw new ApiError("HubSpot request failed", 500, "");
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetchWithRetry(method, path, body);
 
   if (!res.ok) {
     const responseBody = await res.text().catch(() => "");
-    logger.error("HubSpot API error", {
-      status: res.status,
-      path,
-      responseBody,
-    });
+    logger.error("HubSpot API error", { status: res.status, path, responseBody });
     throw new ApiError(
       `HubSpot API error: ${res.status} ${res.statusText}`,
       res.status,
@@ -41,9 +62,7 @@ async function request<T>(
     );
   }
 
-  // Some endpoints return 204 No Content
   if (res.status === 204) return undefined as T;
-
   return res.json() as Promise<T>;
 }
 
@@ -55,16 +74,7 @@ async function requestIgnoreConflict<T>(
   path: string,
   body?: unknown,
 ): Promise<T | null> {
-  await hubspotLimiter.acquire();
-
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${config.hubspotAccessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const res = await fetchWithRetry(method, path, body);
 
   if (res.status === 409) return null;
 
@@ -95,6 +105,16 @@ export async function batchUpsertContacts(
 
 export async function deleteContact(contactId: string): Promise<void> {
   await request<void>("DELETE", `/crm/v3/objects/contacts/${contactId}`);
+}
+
+/**
+ * Permanently deletes a contact (bypasses the recycling bin).
+ * Requires GDPR features enabled on the HubSpot account.
+ */
+export async function gdprDeleteContact(contactId: string): Promise<void> {
+  await request<void>("POST", "/crm/v3/objects/contacts/gdpr-delete", {
+    objectId: contactId,
+  });
 }
 
 // ─── Property Endpoints ──────────────────────────────────

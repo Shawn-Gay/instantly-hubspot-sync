@@ -140,12 +140,8 @@ async function pollLeads(): Promise<void> {
 }
 
 export function startPoller(): void {
-  if (!config.pollEnabled) {
-    logger.info("Polling disabled via POLL_ENABLED=false");
-    return;
-  }
+  if (!config.pollEnabled) return;
 
-  logger.info("Starting poller", { intervalMs: config.pollIntervalMs });
   intervalId = setInterval(pollLeads, config.pollIntervalMs);
   // Run first poll after a short delay to let boot complete
   setTimeout(pollLeads, 5_000);

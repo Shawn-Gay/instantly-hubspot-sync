@@ -115,27 +115,27 @@ const PROPERTY_DEFINITIONS: HubSpotPropertyDefinition[] = [
   },
 ];
 
-export async function ensureCustomProperties(): Promise<void> {
-  logger.info("Ensuring HubSpot custom property group exists...");
-
+export async function ensureCustomProperties(): Promise<{ created: number; patched: number }> {
   await createPropertyGroup({
     name: GROUP_NAME,
     label: "Instantly Integration",
     displayOrder: 6,
   });
 
-  logger.info("Ensuring HubSpot custom properties exist...");
+  let created = 0;
+  let patched = 0;
 
   for (const prop of PROPERTY_DEFINITIONS) {
     const result = await createProperty(prop);
     if (result) {
       logger.info("Created HubSpot property", { name: prop.name });
+      created++;
     } else {
       // Property already exists — patch it to ensure type/fieldType match the current definition
       await patchProperty(prop.name, { type: prop.type, fieldType: prop.fieldType, label: prop.label, description: prop.description });
-      logger.debug("HubSpot property already exists (patched)", { name: prop.name });
+      patched++;
     }
   }
 
-  logger.info("HubSpot custom properties ready");
+  return { created, patched };
 }

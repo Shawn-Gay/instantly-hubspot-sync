@@ -44,14 +44,14 @@ function classifyJob(
       return "queue";
 
     case "email_opened":
-    case "email_clicked":
+    case "email_link_clicked":
       return "upsert-warm";
 
-    case "email_replied":
+    case "reply_received":
       return "upsert-hot";
 
     case "email_bounced":
-    case "email_unsubscribed":
+    case "lead_unsubscribed":
       return "delete";
 
     case "lead_status_change": {
@@ -120,7 +120,7 @@ function buildProperties(payload: SyncJobPayload, tier?: string): Record<string,
       }
       break;
 
-    case "email_clicked":
+    case "email_link_clicked":
       if (payload.click_count !== undefined) {
         props.instantly_email_click_count = String(payload.click_count);
       }
@@ -130,7 +130,7 @@ function buildProperties(payload: SyncJobPayload, tier?: string): Record<string,
       props.instantly_email_bounced = "true";
       break;
 
-    case "email_replied":
+    case "reply_received":
       props.instantly_reply_received = "true";
       if (payload.reply_text) {
         props.instantly_reply_snippet = payload.reply_text.slice(0, 500);
@@ -143,7 +143,7 @@ function buildProperties(payload: SyncJobPayload, tier?: string): Record<string,
       }
       break;
 
-    case "email_unsubscribed":
+    case "lead_unsubscribed":
       props.instantly_unsubscribed = "true";
       break;
   }

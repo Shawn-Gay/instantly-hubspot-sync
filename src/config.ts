@@ -35,6 +35,7 @@ export const config = {
   pollIntervalMs: optionalInt("POLL_INTERVAL_MS", 300_000),
   pollEnabled: optionalBool("POLL_ENABLED", true),
   syncIntervalMs: optionalInt("SYNC_INTERVAL_MS", 10_000),
+  syncEnabled: optionalBool("SYNC_ENABLED", true),
   webhookSecret: optional("WEBHOOK_SECRET", ""),
   autoRegisterWebhooks: optionalBool("AUTO_REGISTER_WEBHOOKS", true),
   coldPoolMax: optionalInt("COLD_POOL_MAX", 200),

@@ -6,7 +6,6 @@ import type {
   InstantlyLeadListResponse,
   InstantlyWebhook,
   InstantlyWebhookListResponse,
-  InstantlyEventType,
 } from "./types.ts";
 
 const BASE_URL = "https://api.instantly.ai/api/v2";
@@ -83,36 +82,52 @@ export async function listWebhooks(): Promise<InstantlyWebhookListResponse> {
   return request<InstantlyWebhookListResponse>("GET", "/webhooks");
 }
 
-const WEBHOOK_EVENT_TYPES: InstantlyEventType[] = [
-  "email_sent",
-  "email_opened",
-  "email_clicked",
-  "email_bounced",
-  "email_replied",
-  "lead_status_change",
-  "email_unsubscribed",
-];
+export async function listWebhookEventTypes(): Promise<string[]> {
+  const res = await request<unknown>("GET", "/webhooks/event-types");
+  if (Array.isArray(res)) return res as string[];
+  if (res && typeof res === "object" && "items" in res && Array.isArray((res as { items: unknown }).items)) {
+    return (res as { items: string[] }).items;
+  }
+  return [];
+}
 
-export async function registerWebhooks(baseUrl: string): Promise<void> {
-  const existing = await listWebhooks();
+export async function registerWebhooks(baseUrl: string): Promise<{ registered: number; skipped: number; failed: number }> {
+  const [existing, eventTypes] = await Promise.all([
+    listWebhooks(),
+    listWebhookEventTypes(),
+  ]);
   const webhookUrl = `${baseUrl}/webhooks/instantly`;
 
   const existingUrls = new Set(
     existing.items.map((w: InstantlyWebhook) => `${w.event_type}:${w.target_hook_url}`),
   );
 
-  for (const eventType of WEBHOOK_EVENT_TYPES) {
+  let registered = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const eventType of eventTypes) {
     const key = `${eventType}:${webhookUrl}`;
     if (existingUrls.has(key)) {
-      logger.info("Webhook already registered", { eventType, webhookUrl });
+      skipped++;
       continue;
     }
 
-    logger.info("Registering webhook", { eventType, webhookUrl });
-    await request("POST", "/webhooks", {
-      event_type: eventType,
-      target_hook_url: webhookUrl,
-    });
-    logger.info("Registered webhook", { eventType, webhookUrl });
+    try {
+      await request("POST", "/webhooks", {
+        event_type: eventType,
+        target_hook_url: webhookUrl,
+      });
+      logger.info("Registered webhook", { eventType });
+      registered++;
+    } catch (err) {
+      logger.warn("Failed to register webhook", {
+        eventType,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      failed++;
+    }
   }
+
+  return { registered, skipped, failed };
 }

@@ -126,10 +126,6 @@ export async function resetStaleJobs(): Promise<number> {
     .where(eq(syncJobs.status, "processing"))
     .returning({ id: syncJobs.id });
 
-  if (result.length > 0) {
-    logger.info("Reset stale processing jobs", { count: result.length });
-  }
-
   return result.length;
 }
 

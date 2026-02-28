@@ -3,11 +3,10 @@
 export type InstantlyEventType =
   | "email_sent"
   | "email_opened"
-  | "email_clicked"
+  | "email_link_clicked"
   | "email_bounced"
-  | "email_replied"
-  | "lead_status_change"
-  | "email_unsubscribed";
+  | "reply_received"
+  | "lead_unsubscribed";
 
 export interface InstantlyWebhookPayload {
   event_type: InstantlyEventType;
