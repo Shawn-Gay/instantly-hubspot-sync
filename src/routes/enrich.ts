@@ -1,12 +1,37 @@
 import { Hono } from "hono";
+import { desc } from "drizzle-orm";
 import { logger } from "../lib/logger.ts";
-import { runScraperPipeline } from "../services/enrichment/scraper.ts";
+import { db } from "../db/client.ts";
+import { enrichedLeads } from "../db/schema.ts";
+import { runScraperPipeline } from "../services/enrichment/scraper/index.ts";
 import { runLLMExtraction } from "../services/enrichment/extractor.ts";
 
 export const enrichRoutes = new Hono();
 
 let scrapeRunning = false;
 let extractRunning = false;
+
+/**
+ * GET /enrich/leads
+ * Returns all enriched leads as JSON.
+ */
+enrichRoutes.get("/leads", async (c) => {
+  const rows = await db
+    .select()
+    .from(enrichedLeads)
+    .orderBy(desc(enrichedLeads.processedAt));
+
+  const leads = rows.map((r) => ({
+    ...r,
+    contacts: JSON.parse(r.contactsJson ?? "[]"),
+    socialLinks: JSON.parse(r.socialLinksJson ?? "[]"),
+    bookingLinks: JSON.parse(r.bookingLinksJson ?? "[]"),
+    hiringSignals: JSON.parse(r.hiringSignalsJson ?? "[]"),
+    recentNews: JSON.parse(r.recentNewsJson ?? "[]"),
+  }));
+
+  return c.json(leads);
+});
 
 /**
  * POST /enrich/scrape?limit=N

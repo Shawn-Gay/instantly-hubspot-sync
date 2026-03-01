@@ -1,14 +1,15 @@
-import * as cheerio from "cheerio";
-import TurndownService from "turndown";
 import { eq, isNotNull } from "drizzle-orm";
-import { db } from "../../db/client.ts";
-import { syncedLeads, rawScrapedWebsites } from "../../db/schema.ts";
-import { logger } from "../../lib/logger.ts";
+import { db } from "../../../db/client.ts";
+import { syncedLeads, rawScrapedWebsites } from "../../../db/schema.ts";
+import { logger } from "../../../lib/logger.ts";
+import { FALLBACK_PATHS, MAX_PAGES, PAGE_DELAY_MS } from "./constants.ts";
+import { normalizeBaseUrl, getLabelForUrl, getUrlsFromSitemap, discoverUrlsFromHomepage } from "./url-discovery.ts";
+import { fetchPageMarkdown } from "./md-fetcher.ts";
 
-const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
-
-const SUBPAGES = ["", "/about", "/contact", "/blog"];
-const FETCH_TIMEOUT_MS = 10_000;
+// Testing mode: when true, only scrapes the homepage + 1 subpage per lead
+// so you can validate the full pipeline without hammering every site.
+const isTesting = false;
+const MAX_TEST_PAGES = 2;
 
 export interface ScraperResult {
   total: number;
@@ -75,24 +76,43 @@ export async function runScraperPipeline(limit = 50): Promise<ScraperResult> {
     skipped: candidates.length - toScrape.length,
     failed,
   };
-  logger.info("Scraper pipeline complete", result);
+  logger.info("Scraper pipeline complete", {...result});
   return result;
 }
 
 async function scrapeWebsite(rawUrl: string): Promise<string> {
   const base = normalizeBaseUrl(rawUrl);
+
+  // Strategy 1: Parse sitemap.xml for the real page URLs
+  let urlsToFetch = await getUrlsFromSitemap(base);
+
+  // Strategy 2: Discover internal links from the homepage nav/footer
+  if (urlsToFetch.length === 0) {
+    urlsToFetch = await discoverUrlsFromHomepage(base);
+  }
+
+  // Strategy 3: Fall back to guessing known paths
+  if (urlsToFetch.length === 0) {
+    urlsToFetch = FALLBACK_PATHS.map((p) => `${base}${p.path}`);
+  }
+
+  // Homepage is always first; deduplicate
+  const pageLimit = isTesting ? MAX_TEST_PAGES : MAX_PAGES;
+  const allUrls = [base, ...urlsToFetch.filter((u) => u !== base)].slice(0, pageLimit);
+
   const sections: string[] = [];
+  const visited = new Set<string>();
 
-  const results = await Promise.allSettled(
-    SUBPAGES.map((path) => fetchPageMarkdown(base, path)),
-  );
+  for (const url of allUrls) {
+    if (visited.has(url)) continue;
+    visited.add(url);
 
-  const labels = ["Homepage", "About", "Contact", "Blog"];
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    if (result.status === "fulfilled" && result.value) {
-      sections.push(`# ${labels[i]}\n\n${result.value}`);
+    const label = getLabelForUrl(url, base);
+    const content = await fetchPageMarkdown(url);
+    if (content) {
+      sections.push(`# ${label}\n\n${content}`);
     }
+    await new Promise<void>((r) => setTimeout(r, PAGE_DELAY_MS));
   }
 
   if (sections.length === 0) {
@@ -100,39 +120,4 @@ async function scrapeWebsite(rawUrl: string): Promise<string> {
   }
 
   return sections.join("\n\n---\n\n");
-}
-
-async function fetchPageMarkdown(base: string, path: string): Promise<string | null> {
-  const url = `${base}${path}`;
-  let res: Response;
-  try {
-    res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-  } catch {
-    return null;
-  }
-
-  if (!res.ok) return null;
-
-  const contentType = res.headers.get("content-type") ?? "";
-  if (!contentType.includes("text/html")) return null;
-
-  const html = await res.text();
-  return htmlToMarkdown(html);
-}
-
-function htmlToMarkdown(html: string): string {
-  const $ = cheerio.load(html);
-  $("script, style, nav, footer, noscript, iframe, svg").remove();
-  const bodyHtml = $("body").html() ?? "";
-  const markdown = td.turndown(bodyHtml);
-  // Trim to avoid token bloat — cap at ~8000 chars per page
-  return markdown.slice(0, 8_000).trim();
-}
-
-function normalizeBaseUrl(raw: string): string {
-  const trimmed = raw.trim().replace(/\/+$/, "");
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
-  }
-  return `https://${trimmed}`;
 }

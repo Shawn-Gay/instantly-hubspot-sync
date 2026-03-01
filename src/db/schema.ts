@@ -19,8 +19,14 @@ export const rawScrapedWebsites = pgTable("raw_scraped_websites", {
 export const enrichedLeads = pgTable("enriched_leads", {
   email: text("email").primaryKey().references(() => syncedLeads.email),
   companySummary: text("company_summary"),
+  valueProposition: text("value_proposition"),
+  businessType: text("business_type"),
   targetAudience: text("target_audience"),
+  primaryCta: text("primary_cta"),
   contactsJson: text("contacts_json"),
+  socialLinksJson: text("social_links_json"),
+  bookingLinksJson: text("booking_links_json"),
+  hiringSignalsJson: text("hiring_signals_json"),
   recentNewsJson: text("recent_news_json"),
   processedAt: timestamp("processed_at").defaultNow().notNull(),
 });
