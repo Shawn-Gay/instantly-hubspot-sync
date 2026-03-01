@@ -12,7 +12,9 @@
       "Bash(bunx drizzle-kit:*)",
       "Bash(bunx tsc:*)",
       "Bash(bun run --bun tsc --noEmit)",
-      "Bash(bun run db:generate)"
+      "Bash(bun run db:generate)",
+      "Bash(bun remove @atjsh/llmlingua-2 @huggingface/transformers js-tiktoken)",
+      "Bash(bun remove @tensorflow/tfjs)"
     ]
   }
 }

@@ -1,10 +1,5 @@
 import * as cheerio from "cheerio";
 import { td, MEETING_PATTERNS, FETCH_TIMEOUT_MS, BROWSER_HEADERS } from "./constants.ts";
-import { LLMLingua2 } from '@atjsh/llmlingua-2';
-import { TokenizerModel } from "@huggingface/transformers";
-import { AutoModelForTokenClassification, AutoTokenizer } from '@huggingface/transformers';
-import { getEncoding } from 'js-tiktoken';
-const modelName = 'atjsh/llmlingua-2-js-tinybert-meetingbank';
 
 export async function fetchPageMarkdown(url: string): Promise<string | null> {
   let res: Response;
@@ -20,10 +15,6 @@ export async function fetchPageMarkdown(url: string): Promise<string | null> {
   if (!contentType.includes("text/html")) return null;
 
   const html = await res.text();
-  
-  // If we want to revisit... this is big potential dataloss issue, a loss detail is not worth saving $.0005!
-  // const compressed = await compressHtml(html);
- 
   return htmlToMarkdown(html);
 }
 
@@ -102,22 +93,4 @@ function htmlToMarkdown(html: string): string {
   if (prefix.length) markdown = prefix.join("\n\n") + "\n\n" + markdown;
 
   return markdown.slice(0, 14_000).trim();
-}
-
-async function compressHtml(html: string): Promise<string> {
-  const model = await AutoModelForTokenClassification.from_pretrained(modelName);
-  const tokenizer = await AutoTokenizer.from_pretrained(modelName);
-  const oaiTokenizer = getEncoding("cl100k_base");
-
-  const compressor = new LLMLingua2.PromptCompressor(
-    model,
-    tokenizer,
-    LLMLingua2.get_pure_tokens_bert_base_multilingual_cased,
-    LLMLingua2.is_begin_of_new_word_bert_base_multilingual_cased,
-    oaiTokenizer,
-    { max_batch_size: 256, max_force_token: 0, max_seq_length: 510 }, // 510 = 512 minus [CLS] + [SEP] added by tokenizer
-    console.log
-  );
-
-  return compressor.compress(html, { rate: 0.64, tokenToWord: "mean" });
 }
