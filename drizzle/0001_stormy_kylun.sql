@@ -1,0 +1,1 @@
+ALTER TABLE "synced_leads" ADD COLUMN "website" text;

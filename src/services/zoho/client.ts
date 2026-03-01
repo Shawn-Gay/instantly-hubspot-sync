@@ -2,7 +2,7 @@ import { config } from "../../config.ts";
 import { ApiError } from "../../lib/errors.ts";
 import { logger } from "../../lib/logger.ts";
 import { zohoLimiter } from "../../lib/rate-limiter.ts";
-import type { ZohoContact, ZohoSearchResponse, ZohoTokenResponse } from "./types.ts";
+import type { ZohoContact, ZohoSearchResponse, ZohoTokenResponse, ZohoUpsertRecordResult, ZohoUpsertResult, ZohoUpsertError } from "./types.ts";
 
 // ─── OAuth2 Token Cache ──────────────────────────────────
 
@@ -33,8 +33,6 @@ async function getAccessToken(): Promise<string> {
   }
 
   const data = (await res.json()) as ZohoTokenResponse & { error?: string };
-  console.log("Zoho token response:", JSON.stringify(data));
-
   if (data.error || !data.access_token) {
     throw new ApiError(`Zoho token refresh error: ${data.error ?? "no access_token"}`, 401, JSON.stringify(data));
   }
@@ -128,17 +126,38 @@ export async function updateLead(id: string, fields: Record<string, unknown>): P
 }
 
 /**
- * Create a new Zoho Lead. Returns the new lead's ID.
+ * Upsert up to N leads in batches of 100.
+ * Uses Email as the duplicate check field — Zoho will update if found, insert if not.
+ *
+ * The Zoho response is positional (data[i] corresponds to input[i]), and the HTTP
+ * status is 200 even for partial failures. Each record is checked individually so
+ * callers get a clean split of successes and errors without one bad record killing the batch.
  */
-export async function createLead(fields: Record<string, unknown>): Promise<string> {
-  const res = await request<{ data: Array<{ details: { id: string }; code: string }> }>(
-    "POST",
-    "/Leads",
-    { data: [fields] },
-  );
-  const record = res.data?.[0];
-  if (!record || record.code !== "SUCCESS") {
-    throw new Error(`Zoho createLead failed: ${JSON.stringify(record)}`);
+export async function batchUpsertLeads(leads: Array<Record<string, unknown>>): Promise<{
+  successes: ZohoUpsertResult[];
+  errors: ZohoUpsertError[];
+}> {
+  const successes: ZohoUpsertResult[] = [];
+  const errors: ZohoUpsertError[] = [];
+
+  for (let i = 0; i < leads.length; i += 100) {
+    const chunk = leads.slice(i, i + 100);
+    const res = await request<{ data: ZohoUpsertRecordResult[] }>("POST", "/Leads/upsert", {
+      data: chunk,
+      duplicate_check_fields: ["Email"],
+    });
+
+    for (let j = 0; j < chunk.length; j++) {
+      const email = chunk[j]!.Email as string;
+      const result = res.data[j];
+      if (result?.code === "SUCCESS" && result.details?.id) {
+        successes.push({ email, zohoId: result.details.id, action: result.action! });
+      } else {
+        errors.push({ email, code: result?.code ?? "UNKNOWN", message: result?.message ?? "No details" });
+      }
+    }
   }
-  return record.details.id;
+
+  return { successes, errors };
 }
+

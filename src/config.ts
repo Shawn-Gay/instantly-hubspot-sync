@@ -49,6 +49,9 @@ export const config = {
 
   // JustCall
   justcallMeetingBookedOutcome: optional("JUSTCALL_MEETING_BOOKED_OUTCOME", "Meeting Booked"),
+
+  // Enrichment
+  googleApiKey: required("GOOGLE_GENERATIVE_AI_API_KEY"),
 } as const;
 
 export type Config = typeof config;

@@ -9,12 +9,3 @@ export class ApiError extends Error {
   }
 }
 
-export class RateLimitError extends ApiError {
-  constructor(
-    public retryAfterMs: number,
-    message = "Rate limit exceeded",
-  ) {
-    super(message, 429);
-    this.name = "RateLimitError";
-  }
-}

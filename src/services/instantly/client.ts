@@ -89,21 +89,17 @@ export async function getAllLeads(limit = 100): Promise<InstantlyLead[]> {
   const all: InstantlyLead[] = [];
   let cursor: string | undefined;
 
-  // Lets keep the batch sizes to 100
-  limit = limit > 100 ? 100 : limit;
+  const pageSize = Math.min(limit, 100);
 
   while (true) {
-    const body: Record<string, unknown> = { 
-      limit,
-      in_campaign: true
-     };
+    const body: Record<string, unknown> = { limit: pageSize, in_campaign: true };
     if (cursor) body.starting_after = cursor;
 
     const res = await request<InstantlyLeadListResponse>("POST", "/leads/list", body);
     const items = res.items ?? [];
     all.push(...items);
 
-    if (!res.next_starting_after || items.length < 100) break;
+    if (!res.next_starting_after || items.length < pageSize) break;
     cursor = res.next_starting_after;
   }
 
@@ -117,12 +113,8 @@ export async function listWebhooks(): Promise<InstantlyWebhookListResponse> {
 }
 
 export async function listWebhookEventTypes(): Promise<string[]> {
-  const res = await request<unknown>("GET", "/webhooks/event-types");
-  if (Array.isArray(res)) return res as string[];
-  if (res && typeof res === "object" && "items" in res && Array.isArray((res as { items: unknown }).items)) {
-    return (res as { items: string[] }).items;
-  }
-  return [];
+  const res = await request<string[] | { items: string[] }>("GET", "/webhooks/event-types");
+  return Array.isArray(res) ? res : (res?.items ?? []);
 }
 
 export async function registerWebhooks(baseUrl: string): Promise<{ registered: number; skipped: number; failed: number }> {

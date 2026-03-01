@@ -7,6 +7,7 @@ import { registerWebhooks } from "./services/instantly/client.ts";
 import { webhookRoutes } from "./routes/webhooks.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { syncRoutes } from "./routes/sync.ts";
+import { enrichRoutes } from "./routes/enrich.ts";
 import { runMigrations } from "./db/migrate.ts";
 
 const app = new Hono();
@@ -15,6 +16,7 @@ const app = new Hono();
 app.route("/webhooks", webhookRoutes);
 app.route("/health", healthRoutes);
 app.route("/sync", syncRoutes);
+app.route("/enrich", enrichRoutes);
 
 // Root redirect to health
 app.get("/", (c) => c.redirect("/health"));

@@ -11,7 +11,8 @@
       "Bash(rm:*)",
       "Bash(bunx drizzle-kit:*)",
       "Bash(bunx tsc:*)",
-      "Bash(bun run --bun tsc --noEmit)"
+      "Bash(bun run --bun tsc --noEmit)",
+      "Bash(bun run db:generate)"
     ]
   }
 }
