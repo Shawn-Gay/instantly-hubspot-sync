@@ -23,11 +23,14 @@ enrichRoutes.get("/leads", async (c) => {
 
   const leads = rows.map((r) => ({
     ...r,
-    contacts: JSON.parse(r.contactsJson ?? "[]"),
-    socialLinks: JSON.parse(r.socialLinksJson ?? "[]"),
-    bookingLinks: JSON.parse(r.bookingLinksJson ?? "[]"),
-    hiringSignals: JSON.parse(r.hiringSignalsJson ?? "[]"),
-    recentNews: JSON.parse(r.recentNewsJson ?? "[]"),
+    serviceAreas: JSON.parse(r.serviceAreasJson ?? "[]"),
+    servicesOffered: JSON.parse(r.servicesOfferedJson ?? "[]"),
+    trustSignals: JSON.parse(r.trustSignalsJson ?? "[]"),
+    marketingGaps: JSON.parse(r.marketingGapsJson ?? "[]"),
+    stormMentions: JSON.parse(r.stormMentionsJson ?? "[]"),
+    ownerOrLeaders: JSON.parse(r.ownerOrLeadersJson ?? "[]"),
+    manufacturerCertifications: JSON.parse(r.manufacturerCertificationsJson ?? "[]"),
+    highTicketMaterials: JSON.parse(r.highTicketMaterialsJson ?? "[]"),
   }));
 
   return c.json(leads);

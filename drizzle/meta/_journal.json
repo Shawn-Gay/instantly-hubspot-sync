@@ -29,6 +29,20 @@
       "when": 1772406585400,
       "tag": "0003_silly_loners",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772500000000,
+      "tag": "0004_roofer_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772500001000,
+      "tag": "0005_cheerful_professor_monster",
+      "breakpoints": true
     }
   ]
 }

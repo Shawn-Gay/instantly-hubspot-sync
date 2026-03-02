@@ -1,0 +1,228 @@
+{
+  "id": "3363958e-1268-42b2-9eef-5dfa6a2030d5",
+  "prevId": "c079da60-921f-439b-8d67-15ed0bb9ee14",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.enriched_leads": {
+      "name": "enriched_leads",
+      "schema": "",
+      "columns": {
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_name": {
+          "name": "company_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_areas_json": {
+          "name": "service_areas_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "services_offered_json": {
+          "name": "services_offered_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "emergency_services": {
+          "name": "emergency_services",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "free_estimate_offered": {
+          "name": "free_estimate_offered",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_lead_capture": {
+          "name": "current_lead_capture",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "financing_offered": {
+          "name": "financing_offered",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trust_signals_json": {
+          "name": "trust_signals_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "marketing_gaps_json": {
+          "name": "marketing_gaps_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "storm_mentions_json": {
+          "name": "storm_mentions_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_or_leaders_json": {
+          "name": "owner_or_leaders_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "enriched_leads_email_synced_leads_email_fk": {
+          "name": "enriched_leads_email_synced_leads_email_fk",
+          "tableFrom": "enriched_leads",
+          "tableTo": "synced_leads",
+          "columnsFrom": [
+            "email"
+          ],
+          "columnsTo": [
+            "email"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.raw_scraped_websites": {
+      "name": "raw_scraped_websites",
+      "schema": "",
+      "columns": {
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "markdown_content": {
+          "name": "markdown_content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scraped_at": {
+          "name": "scraped_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "raw_scraped_websites_email_synced_leads_email_fk": {
+          "name": "raw_scraped_websites_email_synced_leads_email_fk",
+          "tableFrom": "raw_scraped_websites",
+          "tableTo": "synced_leads",
+          "columnsFrom": [
+            "email"
+          ],
+          "columnsTo": [
+            "email"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.synced_leads": {
+      "name": "synced_leads",
+      "schema": "",
+      "columns": {
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "instantly_id": {
+          "name": "instantly_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "zoho_id": {
+          "name": "zoho_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "website": {
+          "name": "website",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

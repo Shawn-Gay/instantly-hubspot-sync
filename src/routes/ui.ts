@@ -55,42 +55,42 @@ const HTML = /* html */ `<!DOCTYPE html>
     tbody tr { border-bottom: 1px solid #1a2030; cursor: pointer; }
     tbody tr:hover { background: #161b27; }
     tbody tr.expanded { background: #161b27; }
-    td { padding: 9px 12px; vertical-align: top; max-width: 280px; }
+    td { padding: 9px 12px; vertical-align: top; }
 
     .email { color: #60a5fa; font-family: monospace; font-size: 12px; white-space: nowrap; }
+    .company { font-weight: 500; color: #f1f5f9; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
     .badge {
       display: inline-block;
-      padding: 2px 8px;
+      padding: 2px 7px;
       border-radius: 99px;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       white-space: nowrap;
+      margin: 1px 2px 1px 0;
     }
-    .badge-B2B    { background: #1e3a5f; color: #60a5fa; }
-    .badge-B2C    { background: #3b2a1a; color: #fb923c; }
-    .badge-SaaS   { background: #1a2e1a; color: #4ade80; }
-    .badge-Agency { background: #2d1b4e; color: #c084fc; }
-    .badge-Ecom   { background: #1e1a3b; color: #818cf8; }
-    .badge-Other  { background: #1e2533; color: #94a3b8; }
+    .badge-yes     { background: #14532d; color: #4ade80; }
+    .badge-no      { background: #1c1917; color: #57534e; }
+    .badge-storm   { background: #3b2a1a; color: #fb923c; }
+    .badge-service { background: #1e2a3b; color: #7dd3fc; }
+    .badge-gap     { background: #2d1515; color: #f87171; }
 
-    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; color: #94a3b8; }
-    .cta { color: #fbbf24; font-size: 12px; }
-    .hiring-yes { color: #4ade80; font-weight: 600; }
-    .hiring-no  { color: #374151; }
+    .lead-capture { color: #94a3b8; font-size: 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ts { color: #475569; font-size: 11px; white-space: nowrap; }
 
     /* Expanded detail row */
     .detail-row td { background: #0d1117; padding: 0; }
-    .detail-inner { padding: 16px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .detail-inner { padding: 16px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .detail-section { margin-bottom: 16px; }
     .detail-section h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #475569; margin-bottom: 6px; }
     .detail-section p, .detail-section li { color: #cbd5e1; line-height: 1.6; font-size: 12px; }
     .detail-section ul { list-style: none; padding: 0; }
     .detail-section li::before { content: "→ "; color: #3b82f6; }
-    .detail-section a { color: #60a5fa; text-decoration: none; }
-    .detail-section a:hover { text-decoration: underline; }
-    .contact-card { background: #161b27; border: 1px solid #1e2533; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; }
-    .contact-card .name { font-weight: 600; color: #f1f5f9; }
-    .contact-card .role { color: #64748b; font-size: 11px; margin-bottom: 4px; }
+    .detail-section .empty { color: #374151; }
+
+    .bool-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+    .bool-item { font-size: 12px; color: #94a3b8; background: #161b27; padding: 6px 10px; border-radius: 4px; border: 1px solid #1e2533; }
+    .bool-item strong { color: #f1f5f9; display: block; margin-bottom: 2px; font-size: 10px; text-transform: uppercase; }
 
     #loading { text-align: center; padding: 60px; color: #475569; }
     #error   { text-align: center; padding: 60px; color: #f87171; }
@@ -98,7 +98,7 @@ const HTML = /* html */ `<!DOCTYPE html>
 </head>
 <body>
   <header>
-    <h1>Enriched Leads</h1>
+    <h1>Enriched Leads — Roofing</h1>
     <span id="count"></span>
     <div class="actions">
       <button onclick="load()">Refresh</button>
@@ -112,11 +112,12 @@ const HTML = /* html */ `<!DOCTYPE html>
       <thead>
         <tr>
           <th>Email</th>
-          <th>Type</th>
-          <th>Summary</th>
-          <th>Primary CTA</th>
-          <th>Hiring?</th>
-          <th>Contacts</th>
+          <th>Company</th>
+          <th>Services</th>
+          <th>Emergency?</th>
+          <th>Lead Capture</th>
+          <th>Storm</th>
+          <th>Gaps</th>
           <th>Processed</th>
         </tr>
       </thead>
@@ -128,66 +129,88 @@ const HTML = /* html */ `<!DOCTYPE html>
 <script>
   let data = [];
 
-  function badgeClass(type) {
-    const map = { B2B: 'B2B', B2C: 'B2C', SaaS: 'SaaS', Agency: 'Agency', 'E-commerce': 'Ecom' };
-    return 'badge badge-' + (map[type] || 'Other');
-  }
-
   function fmtDate(iso) {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function listItems(arr, cls) {
+    // Assuming JSON strings are parsed to arrays on your backend route before sending to frontend.
+    // If they arrive as strings, you would do: arr = typeof arr === 'string' ? JSON.parse(arr || '[]') : arr;
+    if (!arr || !arr.length) return '<li class="empty">None</li>';
+    return arr.map(s => \`<li\${cls ? \` class="\${cls}"\` : ''}>\${s}</li>\`).join('');
+  }
+
+  function serviceBadges(arr) {
+    if (!arr || !arr.length) return '<span style="color:#374151">—</span>';
+    return arr.map(s => \`<span class="badge badge-service">\${s}</span>\`).join('');
+  }
+
   function renderDetail(lead) {
-    const contacts = (lead.contacts || []).map(c => \`
-      <div class="contact-card">
-        <div class="name">\${c.name || '—'}</div>
-        <div class="role">\${c.role || ''}</div>
-        \${c.email ? \`<div><a href="mailto:\${c.email}">\${c.email}</a></div>\` : ''}
-        \${c.phone ? \`<div>\${c.phone}</div>\` : ''}
-        \${c.linkedIn ? \`<div><a href="\${c.linkedIn}" target="_blank">LinkedIn ↗</a></div>\` : ''}
-      </div>\`).join('') || '<p style="color:#475569">None found</p>';
-
-    const listItems = (arr) => (arr || []).length
-      ? arr.map(s => \`<li>\${s}</li>\`).join('')
-      : '<li style="color:#475569">None</li>';
-
-    const linkItems = (arr) => (arr || []).length
-      ? arr.map(s => \`<li><a href="\${s}" target="_blank">\${s}</a></li>\`).join('')
-      : '<li style="color:#475569">None</li>';
+    const owners = (lead.ownerOrLeaders || []).length
+      ? lead.ownerOrLeaders.join(', ')
+      : '<span class="empty">Unknown</span>';
 
     return \`
       <div class="detail-inner">
         <div>
-          <div class="detail-section" style="margin-bottom:16px">
-            <h3>Value Proposition</h3>
-            <p>\${lead.valueProposition || '—'}</p>
-          </div>
-          <div class="detail-section" style="margin-bottom:16px">
-            <h3>Target Audience</h3>
-            <p>\${lead.targetAudience || '—'}</p>
-          </div>
-          <div class="detail-section" style="margin-bottom:16px">
-            <h3>Hiring Signals</h3>
-            <ul>\${listItems(lead.hiringSignals)}</ul>
+          <div class="detail-section">
+            <h3>Owner / Leaders</h3>
+            <p>\${owners}</p>
           </div>
           <div class="detail-section">
-            <h3>Recent News</h3>
-            <ul>\${listItems(lead.recentNews)}</ul>
+            <h3>Target Market</h3>
+            <p>\${lead.targetMarket || '<span class="empty">Not specified</span>'}</p>
+          </div>
+          <div class="detail-section">
+            <h3>Service Areas</h3>
+            <ul>\${listItems(lead.serviceAreas)}</ul>
+          </div>
+          <div class="detail-section">
+            <h3>Trust Signals</h3>
+            <ul>\${listItems(lead.trustSignals)}</ul>
+          </div>
+          <div class="detail-section">
+            <h3>Manufacturer Certifications</h3>
+            <ul>\${listItems(lead.manufacturerCertifications)}</ul>
+          </div>
+          <div class="detail-section">
+            <h3>Quick Facts</h3>
+            <div class="bool-row">
+              <div class="bool-item"><strong>Free Estimate</strong> \${lead.freeEstimateOffered ? '✅ Yes' : '❌ No'}</div>
+              <div class="bool-item"><strong>Financing</strong> \${lead.financingOffered ? '✅ Yes' : '❌ No'}</div>
+              <div class="bool-item"><strong>24/7 Emergency</strong> \${lead.emergencyServices ? '✅ Yes' : '❌ No'}</div>
+              <div class="bool-item"><strong>Bilingual Site</strong> \${lead.bilingualSupportMentioned ? '✅ Yes' : '❌ No'}</div>
+              <div class="bool-item"><strong>Actively Hiring</strong> \${lead.isHiring ? '✅ Yes' : '❌ No'}</div>
+              <div class="bool-item"><strong>Project Gallery</strong> \${lead.hasProjectGallery ? '✅ Yes' : '❌ No'}</div>
+            </div>
           </div>
         </div>
+        
         <div>
-          <div class="detail-section" style="margin-bottom:16px">
-            <h3>Contacts</h3>
-            \${contacts}
-          </div>
-          <div class="detail-section" style="margin-bottom:16px">
-            <h3>Booking Links</h3>
-            <ul>\${linkItems(lead.bookingLinks)}</ul>
+          <div class="detail-section">
+            <h3>High-Ticket Materials Mentioned</h3>
+            <ul>\${listItems(lead.highTicketMaterials)}</ul>
           </div>
           <div class="detail-section">
-            <h3>Social Links</h3>
-            <ul>\${linkItems(lead.socialLinks)}</ul>
+            <h3>Lead Capture Method</h3>
+            <p>\${lead.currentLeadCapture || '—'}</p>
+          </div>
+          <div class="detail-section">
+            <h3>Response Time Promise</h3>
+            <p>\${lead.responseTimePromise || '<span class="empty">None highlighted</span>'}</p>
+          </div>
+          <div class="detail-section">
+            <h3>Storm / Insurance Mentions</h3>
+            <ul>\${listItems(lead.stormMentions)}</ul>
+          </div>
+          <div class="detail-section">
+            <h3>Marketing Gaps</h3>
+            <ul>\${listItems(lead.marketingGaps)}</ul>
+          </div>
+          <div class="detail-section">
+            <h3>Website Outdated Signals</h3>
+            <p>\${lead.websiteOutdatedSignals || '<span class="empty">None detected</span>'}</p>
           </div>
         </div>
       </div>\`;
@@ -200,7 +223,6 @@ const HTML = /* html */ `<!DOCTYPE html>
       document.getElementById('row-' + idx)?.classList.remove('expanded');
       return;
     }
-    // Close any other open rows
     document.querySelectorAll('.detail-row').forEach(r => r.remove());
     document.querySelectorAll('tr.expanded').forEach(r => r.classList.remove('expanded'));
 
@@ -211,22 +233,24 @@ const HTML = /* html */ `<!DOCTYPE html>
     const detail = document.createElement('tr');
     detail.id = 'detail-' + idx;
     detail.className = 'detail-row';
-    detail.innerHTML = \`<td colspan="7">\${renderDetail(lead)}</td>\`;
+    detail.innerHTML = \`<td colspan="8">\${renderDetail(lead)}</td>\`;
     row.after(detail);
   }
 
   function render(leads) {
     const tbody = document.getElementById('tbody');
     tbody.innerHTML = leads.map((lead, i) => {
-      const hiring = (lead.hiringSignals || []).length > 0;
+      const hasStorm = (lead.stormMentions || []).length > 0;
+      const gapCount = (lead.marketingGaps || []).length;
       return \`
         <tr id="row-\${i}" onclick="toggleRow(\${i})">
           <td class="email">\${lead.email}</td>
-          <td><span class="\${badgeClass(lead.businessType)}">\${lead.businessType || '?'}</span></td>
-          <td><div class="truncate" title="\${(lead.companySummary || '').replace(/"/g,'&quot;')}">\${lead.companySummary || '—'}</div></td>
-          <td class="cta">\${lead.primaryCta || '—'}</td>
-          <td class="\${hiring ? 'hiring-yes' : 'hiring-no'}">\${hiring ? 'Yes (' + lead.hiringSignals.length + ')' : 'No'}</td>
-          <td style="color:#94a3b8">\${(lead.contacts || []).length}</td>
+          <td class="company" title="\${(lead.companyName || '').replace(/"/g,'&quot;')}">\${lead.companyName || '—'}</td>
+          <td>\${serviceBadges(lead.servicesOffered)}</td>
+          <td><span class="badge \${lead.emergencyServices ? 'badge-yes' : 'badge-no'}">\${lead.emergencyServices ? 'Yes' : 'No'}</span></td>
+          <td class="lead-capture" title="\${(lead.currentLeadCapture || '').replace(/"/g,'&quot;')}">\${lead.currentLeadCapture || '—'}</td>
+          <td>\${hasStorm ? \`<span class="badge badge-storm">\${lead.stormMentions.length} mention\${lead.stormMentions.length > 1 ? 's' : ''}</span>\` : '<span style="color:#374151">—</span>'}</td>
+          <td>\${gapCount ? \`<span class="badge badge-gap">\${gapCount} gap\${gapCount > 1 ? 's' : ''}</span>\` : '<span style="color:#374151">—</span>'}</td>
           <td class="ts">\${fmtDate(lead.processedAt)}</td>
         </tr>\`;
     }).join('');

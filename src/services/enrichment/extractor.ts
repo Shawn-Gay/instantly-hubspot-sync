@@ -10,30 +10,39 @@ const BATCH_SIZE = 10;
 const MODEL = "gemini-2.5-flash-lite";
 
 const LeadEnrichmentSchema = z.object({
-  // ── Core Company Identity ──
-  companySummary: z.string().describe("A concise 2-sentence summary of the company's core offering."),
-  valueProposition: z.string().describe("The main problem they solve or the primary benefit they provide to their customers."),
-  businessType: z.enum(["B2B", "B2C", "E-commerce", "SaaS", "Agency", "Local Business", "Other"])
-    .describe("The primary business model."),
-  targetAudience: z.string().describe("The specific industries, job roles, or demographics they sell to."),
+  // ── Company Profile ──
+  companyName: z.string().describe("The name of the roofing company."),
+  serviceAreas: z.array(z.string()).describe("Specific cities, counties, or regions they explicitly state they serve."),
+  servicesOffered: z.array(z.enum(["Residential", "Commercial", "Storm Damage/Hail", "Gutters", "Siding", "Solar", "Repairs", "Other"]))
+    .describe("The types of services they offer. Categorize them based on the text."),
 
-  // ── Sales Intelligence / Buying Signals ──
-  primaryCTA: z.string().describe("The main Call to Action on the site (e.g., 'Book a Demo', 'Get a Quote', 'Start Free Trial')."),
-  hiringSignals: z.array(z.string()).describe("Mentions of open job roles, 'we are hiring' sections, or specific careers listed."),
-  recentNews: z.array(z.string()).describe("Recent events, product updates, or blog post titles."),
+  // ── AI Receptionist Selling Angles ──
+  emergencyServices: z.boolean().describe("Do they claim to offer 24/7, emergency, or fast-response leak repair?"),
+  freeEstimateOffered: z.boolean().describe("Do they offer a 'Free Estimate', 'Free Inspection', or 'Free Quote'?"),
+  currentLeadCapture: z.string().describe("How do they currently ask for leads? (e.g., 'Phone number only', 'Basic Contact Form', 'Online Scheduling', 'Chat Widget'). If no chat widget is mentioned, note that."),
 
-  // ── Contact & Outreach Data ──
-  contacts: z.array(
-    z.object({
-      name: z.string().optional(),
-      role: z.string().optional(),
-      email: z.string().optional(),
-      phone: z.string().optional(),
-      linkedIn: z.string().optional(),
-    }),
-  ).describe("Named individuals, leadership team members, or specific departmental contacts."),
-  socialLinks: z.array(z.string()).describe("Links to the company's social media profiles (LinkedIn, Twitter, YouTube, etc.)."),
-  bookingLinks: z.array(z.string()).describe("Any calendar or scheduling URLs (e.g., Calendly, HubSpot, Acuity) found in the text."),
+  // ── Premium Marketing Selling Angles ──
+  financingOffered: z.boolean().describe("Do they explicitly mention offering financing or payment plans?"),
+  trustSignals: z.array(z.string()).describe("Mentions of awards, BBB accreditation, 'licensed & insured', years in business, or guarantees/warranties."),
+  marketingGaps: z.array(z.string()).describe("Look for weaknesses: No reviews mentioned, no financing offered, outdated copyright year, or lack of a clear guarantee."),
+
+  // ── News & Triggers ──
+  stormMentions: z.array(z.string()).describe("Any mentions of recent storms, hail damage, wind damage, or insurance claims assistance."),
+
+  // ── Contact Data ──
+  ownerOrLeaders: z.array(z.string()).describe("Names of founders, owners, or family members if it's a family-owned business."),
+
+  // ── Advanced AI Receptionist Angles ──
+  bilingualSupportMentioned: z.boolean().describe("Do they explicitly mention speaking Spanish or bilingual support ('Se Habla Español')? false = huge selling point for bilingual AI."),
+  responseTimePromise: z.string().describe("Any explicit promise about response/callback time (e.g., 'Same day response', '1-hour call back'). Empty string if none."),
+  isHiring: z.boolean().describe("Do they have a 'Careers' or 'Join Our Team' page, or any mention of hiring?"),
+
+  // ── Advanced Premium Marketing Angles ──
+  targetMarket: z.enum(["Residential", "Commercial", "Both"]).describe("Who do they primarily target?"),
+  manufacturerCertifications: z.array(z.string()).describe("Elite manufacturer certifications like 'GAF Master Elite', 'Owens Corning Platinum Preferred'. Empty array if none."),
+  highTicketMaterials: z.array(z.string()).describe("Premium/high-ticket materials they work with: Metal, Slate, Tile, TPO, EPDM, etc. Empty array if none."),
+  hasProjectGallery: z.boolean().describe("Do they have a visual gallery or portfolio of past work (photos of completed jobs)?"),
+  websiteOutdatedSignals: z.string().describe("Any signals the website is outdated: old copyright year, broken layout mentions, etc. Empty string if none."),
 });
 
 export interface ExtractorResult {
@@ -77,13 +86,21 @@ export async function runLLMExtraction(limit = 20): Promise<ExtractorResult> {
             model: google(MODEL),
             schema: LeadEnrichmentSchema,
             prompt: [
-              "You are an expert B2B Sales Researcher. Your job is to analyze the following website content and extract structured intelligence for our sales team.",
+              "You are an expert Sales Development Rep selling AI Receptionists and Marketing Services to Roofing Contractors.",
+              "Your job is to analyze their website content and extract structured data to help write hyper-personalized cold emails.",
               "",
               "INSTRUCTIONS:",
-              "1. Read the 'Prefix' sections at the top (Meta Description, Booking Links, Direct Contacts) carefully. These contain highly accurate technical data.",
-              "2. Infer the 'targetAudience' and 'businessType' based on the language they use (e.g., enterprise jargon means B2B SaaS, shopping carts mean E-commerce).",
-              "3. Look for 'Hiring Signals'. If a company is hiring, it means they have budget and are growing—this is a critical sales trigger.",
-              "4. If a piece of information is entirely missing, return an empty string or empty array. DO NOT hallucinate or guess data.",
+              "1. ROOFER CONTEXT: Roofers lose $15k+ jobs when they miss phone calls because they are on ladders or driving. Look closely at how they currently capture leads (phone only vs. forms).",
+              "2. AI RECEPTIONIST TRIGGERS: If they offer '24/7 Emergency Service' or 'Free Inspections', they have high call volume. Note this.",
+              "3. MARKETING TRIGGERS: If they don't mention financing, or lack strong trust signals (BBB, warranties), flag this in 'marketingGaps'.",
+              "4. STORM DAMAGE: Insurance claims for hail/wind damage are the most lucrative roofing jobs. Extract any mentions of storms or insurance.",
+              "5. If a piece of info is missing, use an empty string or array. DO NOT guess.",
+              "6. BILINGUAL GAP: Check if they explicitly mention speaking Spanish ('Se Habla Español'). If not, flag bilingualSupportMentioned as false (huge selling point for bilingual AI).",
+              "7. RESPONSE TIME EGO: Extract any promises they make about response times (e.g., 'Same day response', '1-hour call back').",
+              "8. LABOR PAIN: Note if they have a 'Careers' page or mention hiring. Busy owners answering phones hate dealing with hiring.",
+              "9. PREMIUM TARGETS: Determine their targetMarket ('Residential', 'Commercial', or 'Both'). Also list highTicketMaterials like Metal, Slate, Tile, or TPO. Missing a $50k commercial metal roof lead hurts more than a shingle lead.",
+              "10. TRUST & BRAND: Look for elite manufacturer certifications (GAF Master Elite, Owens Corning Platinum) and add them to manufacturerCertifications.",
+              "11. MARKETING GAPS II: Check if they actually have a visual gallery/portfolio of past work (hasProjectGallery). Also, note any websiteOutdatedSignals (like an old copyright year or broken text indicators).",
               "",
               "===================",
               "WEBSITE CONTENT:",
@@ -95,16 +112,25 @@ export async function runLLMExtraction(limit = 20): Promise<ExtractorResult> {
             .insert(enrichedLeads)
             .values({
               email: scrape.email,
-              companySummary: object.companySummary,
-              valueProposition: object.valueProposition,
-              businessType: object.businessType,
-              targetAudience: object.targetAudience,
-              primaryCta: object.primaryCTA,
-              contactsJson: JSON.stringify(object.contacts),
-              socialLinksJson: JSON.stringify(object.socialLinks),
-              bookingLinksJson: JSON.stringify(object.bookingLinks),
-              hiringSignalsJson: JSON.stringify(object.hiringSignals),
-              recentNewsJson: JSON.stringify(object.recentNews),
+              companyName: object.companyName,
+              serviceAreasJson: JSON.stringify(object.serviceAreas),
+              servicesOfferedJson: JSON.stringify(object.servicesOffered),
+              emergencyServices: object.emergencyServices,
+              freeEstimateOffered: object.freeEstimateOffered,
+              currentLeadCapture: object.currentLeadCapture,
+              financingOffered: object.financingOffered,
+              trustSignalsJson: JSON.stringify(object.trustSignals),
+              marketingGapsJson: JSON.stringify(object.marketingGaps),
+              stormMentionsJson: JSON.stringify(object.stormMentions),
+              ownerOrLeadersJson: JSON.stringify(object.ownerOrLeaders),
+              bilingualSupportMentioned: object.bilingualSupportMentioned,
+              responseTimePromise: object.responseTimePromise,
+              isHiring: object.isHiring,
+              targetMarket: object.targetMarket,
+              manufacturerCertificationsJson: JSON.stringify(object.manufacturerCertifications),
+              highTicketMaterialsJson: JSON.stringify(object.highTicketMaterials),
+              hasProjectGallery: object.hasProjectGallery,
+              websiteOutdatedSignals: object.websiteOutdatedSignals,
             })
             .onConflictDoNothing();
 
