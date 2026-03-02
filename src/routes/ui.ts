@@ -94,6 +94,54 @@ const HTML = /* html */ `<!DOCTYPE html>
 
     #loading { text-align: center; padding: 60px; color: #475569; }
     #error   { text-align: center; padding: 60px; color: #f87171; }
+
+    /* ── Examples Modal ── */
+    #exModal {
+      position: fixed; inset: 0; background: rgba(0,0,0,.75);
+      z-index: 100; display: flex; align-items: flex-start;
+      justify-content: center; padding: 40px 20px; overflow-y: auto;
+    }
+    .modal-box {
+      background: #161b27; border: 1px solid #1e2533; border-radius: 10px;
+      width: 100%; max-width: 720px; flex-shrink: 0;
+    }
+    .modal-header {
+      display: flex; align-items: center; padding: 16px 20px;
+      border-bottom: 1px solid #1e2533;
+    }
+    .modal-header h2 { font-size: 14px; font-weight: 600; color: #f1f5f9; flex: 1; margin: 0; }
+    .modal-close { background: none; border: none; color: #64748b; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; }
+    .modal-close:hover { color: #e2e8f0; background: none; }
+    .modal-tabs { display: flex; gap: 4px; padding: 12px 20px 0; border-bottom: 1px solid #1e2533; }
+    .tab-btn {
+      padding: 6px 14px; border-radius: 6px 6px 0 0; font-size: 12px;
+      border: 1px solid transparent; border-bottom: none;
+      cursor: pointer; color: #64748b; background: none;
+    }
+    .tab-btn.active { background: #0d1117; color: #e2e8f0; border-color: #1e2533; border-bottom-color: #0d1117; }
+    .modal-body { padding: 20px; background: #0d1117; border-radius: 0 0 10px 10px; }
+    .ex-meta {
+      font-size: 11px; color: #94a3b8; margin-bottom: 14px;
+      padding: 8px 12px; background: #1a2030; border-radius: 4px;
+      border-left: 3px solid #3b82f6; line-height: 1.7;
+    }
+    .ex-subject {
+      font-size: 11px; color: #94a3b8; margin-bottom: 14px;
+      padding: 6px 12px; background: #161b27; border-radius: 4px;
+      border: 1px solid #1e2533;
+    }
+    .ex-subject strong { color: #60a5fa; }
+    .ex-body p { font-size: 12.5px; line-height: 1.8; color: #cbd5e1; margin-bottom: 10px; }
+    .ex-body p:last-child { margin-bottom: 0; }
+    .ex-var { color: #fbbf24; font-style: italic; background: rgba(251,191,36,.1); padding: 0 4px; border-radius: 3px; }
+    .ex-hint { color: #475569; font-size: 11px; font-style: italic; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .call-block { display: flex; flex-direction: column; gap: 12px; }
+    .call-line { font-size: 12.5px; line-height: 1.75; color: #cbd5e1; }
+    .call-role { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; display: inline-block; min-width: 46px; margin-right: 4px; }
+    .call-role.sdr { color: #60a5fa; }
+    .call-role.owner { color: #a78bfa; }
   </style>
 </head>
 <body>
@@ -101,6 +149,7 @@ const HTML = /* html */ `<!DOCTYPE html>
     <h1>Enriched Leads — Roofing</h1>
     <span id="count"></span>
     <div class="actions">
+      <button onclick="showExamples()">Show Examples</button>
       <button onclick="load()">Refresh</button>
       <button class="primary" onclick="triggerExtract()">Run Extract</button>
     </div>
@@ -125,6 +174,94 @@ const HTML = /* html */ `<!DOCTYPE html>
     </table>
     <div id="error" style="display:none"></div>
   </div>
+
+<!-- Examples Modal -->
+<div id="exModal" style="display:none" onclick="if(event.target===this)closeExamples()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Outreach Examples</h2>
+      <button class="modal-close" onclick="closeExamples()">&#x2715;</button>
+    </div>
+    <div class="modal-tabs">
+      <button class="tab-btn active" onclick="switchTab(0)">&#x2709; Storm / Emergency</button>
+      <button class="tab-btn" onclick="switchTab(1)">&#x2709; High-Ticket / Commercial</button>
+      <button class="tab-btn" onclick="switchTab(2)">&#x260E; Cold Call Script</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Tab 0: Storm / Emergency Cold Email -->
+      <div class="tab-content active">
+        <div class="ex-meta">
+          <strong>Target:</strong> Gus Roofing &nbsp;&middot;&nbsp;
+          Emergency: &#x2705; &nbsp;&middot;&nbsp; Storm: Hail mentions &nbsp;&middot;&nbsp;
+          No webchat &nbsp;&middot;&nbsp; Free Estimates: &#x2705;
+        </div>
+        <div class="ex-subject"><strong>Subject:</strong> missed hail calls / Gus Roofing</div>
+        <div class="ex-body">
+          <p>Hey Gus,</p>
+          <p>
+            <span class="ex-var">{{generatedIcebreaker}}</span>
+            <span class="ex-hint"> &mdash; e.g., "Saw you guys are the go-to for hail damage repair around Greeley and love that you offer 5-year workmanship warranties."</span>
+          </p>
+          <p>I was looking at your site and noticed you offer 24/7 emergency services and free estimates &mdash; but there's no web-chat or after-hours text-back system on the site.</p>
+          <p>When hail hits Colorado, roofers usually miss 30%+ of inbound calls because you're out on ladders or driving. Homeowners just call the next roofer on Google if you don't pick up.</p>
+          <p>We build AI Receptionists specifically for roofers that answer calls 24/7, book your free estimates directly on your calendar, and text callers back immediately if you miss them.</p>
+          <p>Open to a quick 3-minute demo video showing how it would work for Gus Roofing?</p>
+          <p style="color:#64748b">Best,<br>[Your Name]</p>
+        </div>
+      </div>
+
+      <!-- Tab 1: High-Ticket / Commercial Cold Email -->
+      <div class="tab-content">
+        <div class="ex-meta">
+          <strong>Target:</strong> Exceptional Exteriors &amp; Renovations &nbsp;&middot;&nbsp;
+          Commercial: &#x2705; &nbsp;&middot;&nbsp; High-Ticket: Metal Roofs &nbsp;&middot;&nbsp;
+          30+ Years in business &nbsp;&middot;&nbsp; No reviews widget
+        </div>
+        <div class="ex-subject"><strong>Subject:</strong> Metal roofing leads for Exceptional Exteriors</div>
+        <div class="ex-body">
+          <p>Hi Dennis,</p>
+          <p>
+            <span class="ex-var">{{generatedIcebreaker}}</span>
+            <span class="ex-hint"> &mdash; e.g., "Massive respect for keeping Exceptional Exteriors locally owned in Pittsburgh for over 30 years."</span>
+          </p>
+          <p>I noticed you specialize in high-ticket Everlast Metal roofs and commercial jobs. Because those jobs carry such a high ticket value, missing just one lead who fills out your basic contact form and gets impatient can cost you $30k+.</p>
+          <p>We help commercial roofers bridge the gap between their website and their phone &mdash; an AI webchat and voice receptionist that pre-qualifies metal/commercial leads 24/7 and live-transfers the high-value ones straight to your cell.</p>
+          <p class="ex-hint">(We also noticed your site is missing a dedicated customer review widget, which we fix through our growth program to boost your baseline conversion rate.)</p>
+          <p>Are you opposed to seeing a quick example of how this captures commercial leads?</p>
+        </div>
+      </div>
+
+      <!-- Tab 2: Cold Call Script -->
+      <div class="tab-content">
+        <div class="ex-meta">
+          <strong>Target:</strong> Monarch Roofing &nbsp;&middot;&nbsp;
+          Hiring: &#x2705; &nbsp;&middot;&nbsp; Market: NJ, 25 experts &nbsp;&middot;&nbsp;
+          No bilingual mention
+        </div>
+        <div class="call-block">
+          <div class="call-line">
+            <span class="call-role sdr">SDR</span>
+            "Hey [Owner], this is [Your Name]. I'll be up front &mdash; this is a cold call. Do you want to hang up, or give me 30 seconds to tell you why I called Monarch Roofing?"
+          </div>
+          <div class="call-line">
+            <span class="call-role owner">Owner</span>
+            "Go ahead."
+          </div>
+          <div class="call-line">
+            <span class="call-role sdr">SDR</span>
+            "I was looking at your site, saw you've got a massive team of 25 experts in New Jersey, and noticed you're actively hiring right now. Usually when owners are scaling and hiring, they're too busy to answer every single phone call &mdash; especially the Spanish-speaking leads, since I didn't see 'Se Habla Espa&#xF1;ol' on the site."
+          </div>
+          <div class="call-line">
+            <span class="call-role sdr">SDR</span>
+            "We install an AI receptionist for roofers that speaks perfect English and Spanish, qualifies your leads, and schedules your estimates so you can focus on running your crews. Are you guys currently using an answering service, or is the phone just ringing straight to you or the office manager?"
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 <script>
   let data = [];
@@ -279,6 +416,17 @@ const HTML = /* html */ `<!DOCTYPE html>
     const res = await fetch('/enrich/extract', { method: 'POST' });
     const body = await res.json();
     alert(body.status === 'started' ? 'Extraction started! Refresh in a minute.' : body.message);
+  }
+
+  function showExamples() {
+    document.getElementById('exModal').style.display = 'flex';
+  }
+  function closeExamples() {
+    document.getElementById('exModal').style.display = 'none';
+  }
+  function switchTab(n) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === n));
+    document.querySelectorAll('.tab-content').forEach((c, i) => c.classList.toggle('active', i === n));
   }
 
   load();

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 
 export const syncedLeads = pgTable("synced_leads", {
   email: text("email").primaryKey(),
@@ -44,5 +44,12 @@ export const enrichedLeads = pgTable("enriched_leads", {
   highTicketMaterialsJson: text("high_ticket_materials_json"),
   hasProjectGallery: boolean("has_project_gallery"),
   websiteOutdatedSignals: text("website_outdated_signals"),
+  // ── Sales-Ready Fields ──
+  primaryCity: text("primary_city"),
+  hasWebChat: boolean("has_web_chat"),
+  hasOnlineBooking: boolean("has_online_booking"),
+  yearsInBusiness: integer("years_in_business"),
+  painPointAngle: text("pain_point_angle"),
+  generatedIcebreaker: text("generated_icebreaker"),
   processedAt: timestamp("processed_at").defaultNow().notNull(),
 });
